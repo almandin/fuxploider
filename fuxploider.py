@@ -75,136 +75,34 @@ for ext in extensions.keys() :
 print(extensionsAcceptees)
 
 
+def techniques(legitExt,badExt,extensions) :
+	retour = []
+	#retour.append(("filename.extension1.extension2","mime/type"))
+	retour.append((randomFileNameGenerator()+"."+legitExt+"."+badExt,extensions[legitExt]))
+	retour.append((randomFileNameGenerator()+"."+legitExt+"."+badExt,extensions[badExt]))
+	retour.append((randomFileNameGenerator()+"."+badExt+"."+legitExt,extensions[legitExt]))
+	retour.append((randomFileNameGenerator()+"."+badExt+"."+legitExt,extensions[badExt]))
+	retour.append((randomFileNameGenerator()+"."+legitExt+"%00."+badExt,extensions[legitExt]))
+	retour.append((randomFileNameGenerator()+"."+legitExt+"%00."+badExt,extensions[badExt]))
+	retour.append((randomFileNameGenerator()+"."+badExt+"%00."+legitExt,extensions[legitExt]))
+	retour.append((randomFileNameGenerator()+"."+badExt+"%00."+legitExt,extensions[badExt]))
 
-for legitExt in extensions.keys() :
+	return retour
+
+for legitExt in list(set(extensions) & set(extensionsAcceptees)) :
 	for badExt in extensionsMalveillantes :
-		#if legitExt in extensionsAcceptees : 
-		#envoyer goodExt+badext + good mime
-		filename = randomFileNameGenerator()+"."+legitExt+"."+badExt
-		mime = extensions[legitExt]
-		fullpath = tempFolder+"/"+filename
-		open(fullpath,"wb").close()
-		logging.info("Trying file "+filename+" with mimetype "+mime)
-		fd = open(fullpath,"rb")
-		fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
-		fd.close()
-		os.remove(fullpath)
-		fileUploaded = re.search(args.errReg,fu.text)
-		if fileUploaded == None :
-			logging.warning("Fichier "+filename+" accepté avec le type mime "+mime)
-
-		#envoyer goodExt+badext + bad mime
-		filename = randomFileNameGenerator()+"."+legitExt+"."+badExt
-		mime = extensions[badExt]
-		fullpath = tempFolder+"/"+filename
-		open(fullpath,"wb").close()
-		logging.info("Trying file "+filename+" with mimetype "+mime)
-		fd = open(fullpath,"rb")
-		fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
-		fd.close()
-		os.remove(fullpath)
-		fileUploaded = re.search(args.errReg,fu.text)
-		if fileUploaded == None :
-			logging.warning("Fichier "+filename+" accepté avec le type mime "+mime)
-
-		#envoyer badext+goodext + good mime
-		filename = randomFileNameGenerator()+"."+badExt+"."+legitExt
-		mime = extensions[legitExt]
-		fullpath = tempFolder+"/"+filename
-		open(fullpath,"wb").close()
-		logging.info("Trying file "+filename+" with mimetype "+mime)
-		fd = open(fullpath,"rb")
-		fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
-		fd.close()
-		os.remove(fullpath)
-		fileUploaded = re.search(args.errReg,fu.text)
-		if fileUploaded == None :
-			logging.warning("Fichier "+filename+" accepté avec le type mime "+mime)
-
-		#envoyer badext+goodext + bad mime
-		filename = randomFileNameGenerator()+"."+badExt+"."+legitExt
-		mime = extensions[badExt]
-		fullpath = tempFolder+"/"+filename
-		open(fullpath,"wb").close()
-		logging.info("Trying file "+filename+" with mimetype "+mime)
-		fd = open(fullpath,"rb")
-		fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
-		fd.close()
-		os.remove(fullpath)
-		fileUploaded = re.search(args.errReg,fu.text)
-		if fileUploaded == None :
-			logging.warning("Fichier "+filename+" accepté avec le type mime "+mime)
-
-		#envoyer goodext+null+badext + good mime
-		filename = randomFileNameGenerator()+"."+legitExt+"%00."+badExt
-		mime = extensions[legitExt]
-		fullpath = tempFolder+"/"+filename
-		open(fullpath,"wb").close()
-		logging.info("Trying file "+filename+" with mimetype "+mime)
-		fd = open(fullpath,"rb")
-		fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
-		fd.close()
-		os.remove(fullpath)
-		fileUploaded = re.search(args.errReg,fu.text)
-		if fileUploaded == None :
-			logging.warning("Fichier "+filename+" accepté avec le type mime "+mime)
-
-		#envoyer goodext+null+badext + bad mime
-		filename = randomFileNameGenerator()+"."+legitExt+"%00."+badExt
-		mime = extensions[badExt]
-		fullpath = tempFolder+"/"+filename
-		open(fullpath,"wb").close()
-		logging.info("Trying file "+filename+" with mimetype "+mime)
-		fd = open(fullpath,"rb")
-		fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
-		fd.close()
-		os.remove(fullpath)
-		fileUploaded = re.search(args.errReg,fu.text)
-		if fileUploaded == None :
-			logging.warning("Fichier "+filename+" accepté avec le type mime "+mime)
-
-		#envoyer badext+null+goodext + good mime
-		filename = randomFileNameGenerator()+"."+badExt+"%00."+legitExt
-		mime = extensions[legitExt]
-		fullpath = tempFolder+"/"+filename
-		open(fullpath,"wb").close()
-		logging.info("Trying file "+filename+" with mimetype "+mime)
-		fd = open(fullpath,"rb")
-		fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
-		fd.close()
-		os.remove(fullpath)
-		fileUploaded = re.search(args.errReg,fu.text)
-		if fileUploaded == None :
-			logging.warning("Fichier "+filename+" accepté avec le type mime "+mime)
-
-		#envoyer badext+null+goodext + bad mime
-		filename = randomFileNameGenerator()+"."+badExt+"%00."+legitExt
-		mime = extensions[badExt]
-		fullpath = tempFolder+"/"+filename
-		open(fullpath,"wb").close()
-		logging.info("Trying file "+filename+" with mimetype "+mime)
-		fd = open(fullpath,"rb")
-		fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
-		fd.close()
-		os.remove(fullpath)
-		fileUploaded = re.search(args.errReg,fu.text)
-		if fileUploaded == None :
-			logging.warning("Fichier "+filename+" accepté avec le type mime "+mime)
-
-#trying double extension
-'''for extLegit in extensionsAcceptees :
-	for badExt in extensionsMalveillantes :
-		filename = randomFileNameGenerator()+"."+badExt+"."+extLegit
-		fullpath = "/tmp/"+filename
-		open(fullpath,"wb").close()
-		fd = open(fullpath,"rb")
-		fu = s.post(uploadURL,files={fileInput["name"]:fd},data=postData)
-		fd.close()'''
-
-'''
-
-pour ext in chaque goodExt :
-	pour badext in chaque badExts :
-		
-
-'''
+		#files = [("nom.ext","mime"),("nom.ext","mime")]
+		files = techniques(legitExt,badExt,extensions)
+		for f in files :
+			filename = f[0]
+			mime = f[1]
+			fullpath = tempFolder+"/"+filename
+			open(fullpath,"wb").close()
+			logging.info("Trying file "+filename+" with mimetype "+mime)
+			fd = open(fullpath,"rb")
+			fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
+			fd.close()
+			os.remove(fullpath)
+			fileUploaded = re.search(args.errReg,fu.text)
+			if fileUploaded == None :
+				logging.warning("Fichier "+filename+" accepté avec le type mime "+mime)
