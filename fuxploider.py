@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 import re,requests,argparse,sys,logging,os,coloredlogs,datetime
-from html.parser import HTMLParser
 from bs4 import BeautifulSoup
 from utils import *
 
