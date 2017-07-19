@@ -9,12 +9,17 @@ coloredlogs.install(fmt='%(asctime)s %(levelname)s - %(message)s', level=logging
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--data", dest="data", help="Additionnal data to be transmitted via POST method. Example : -d \"key1=value1&key2=value2\"", type=valid_postData)
+parser.add_argument("-d", "--data", metavar="postData",dest="data", help="Additionnal data to be transmitted via POST method. Example : -d \"key1=value1&key2=value2\"", type=valid_postData)
+parser.add_argument("--proxy", metavar="proxyUrl", dest="proxy", help="Proxy information. Example : --proxy \"user:password@proxy.host:8080\"", type=valid_proxyString)
+parser.add_argument("--proxy-creds",metavar="credentials",nargs='?',const=True,dest="proxyCreds",help="Prompt for proxy credentials at runtime. Format : 'user:pass'",type=valid_proxyCreds)
 requiredNamedArgs = parser.add_argument_group('Required named arguments')
-requiredNamedArgs.add_argument("-u","--url", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
-requiredNamedArgs.add_argument("--not-regexp", help="Regex matching an upload failure", type=valid_regex, required=True,dest="notRegexp")
+requiredNamedArgs.add_argument("-u","--url", metavar="target", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
+requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex, required=True,dest="notRegex")
 
 args = parser.parse_args()
+
+if args.proxyCreds and args.proxy == None :
+	parser.error("--proxy-creds must be used with --proxy.")
 
 print("""\033[1;32m
                                      
@@ -28,19 +33,48 @@ print("""\033[1;32m
 
 \033[m[!] legal disclaimer : Usage of fuxploider for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
 	""")
+if args.proxyCreds == True :
+	args.proxyCreds = {}
+	args.proxyCreds["username"] = input("Proxy username : ")
+	args.proxyCreds["password"] = getpass.getpass("Proxy password : ")
 
 now = datetime.datetime.now()
 print("[*] starting at "+str(now.hour)+":"+str(now.minute)+":"+str(now.second))
 
 postData = postDataFromStringToJSON(args.data)
 tempFolder = "/tmp"
-
-logging.debug("Checking system proxies")
-detectedOS = platform.system().lower()
-proxies = getSystemProxy(detectedOS)
-
 s = requests.Session()
-s.proxies.update(proxies)
+
+if args.proxy :
+	if args.proxy["username"] and args.proxy["password"] and args.proxyCreds :
+		logging.warning("Proxy username and password provided by the --proxy-creds switch replaces credentials provided using the --proxy switch")
+	if args.proxyCreds :
+		proxyUser = args.proxyCreds["username"]
+		proxyPass = args.proxyCreds["password"]
+	else :
+		proxyUser = args.proxy["username"]
+		proxyPass = args.proxy["password"]
+	proxyProtocol = args.proxy["protocol"]
+	proxyHostname = args.proxy["hostname"]
+	proxyPort = args.proxy["port"]
+	proxy = ""
+	if proxyProtocol != None :
+		proxy += proxyProtocol+"://"
+	else :
+		proxy += "http://"
+
+	if proxyUser != None and proxyPass != None :
+		proxy += proxyUser+":"+proxyPass+"@"
+
+	proxy += proxyHostname
+	if proxyPort != None :
+		proxy += ":"+proxyPort
+
+	if proxyProtocol == "https" :
+		proxies = {"https":proxy}
+	else :
+		proxies = {"http":proxy,"https":proxy}
+	s.proxies.update(proxies)
 
 try :
 	initGet = s.get(args.url,headers={"Accept-Encoding":None})
@@ -48,21 +82,8 @@ try :
 		logging.critical("Server responded with following status : %s - %s",initGet.status_code,initGet.reason)
 		exit()
 except Exception as e :
-	if type(e) == requests.exceptions.ProxyError :
-		error = getProxyErrorType(e)
-		if error["status_code"] == 407 :
-			logging.error("Proxy returned 407 Authentication required.")
-			username = input("Username : ")
-			password = getpass.getpass("Password : ")
-			s.proxies.update(addProxyCreds(s.proxies,(username,password)))
-			proxychanged = True
-	else :
-		logging.critical("%s : Host unreachable",getHost(args.url))
+		logging.critical("%s : Host unreachable (%s)",getHost(args.url),e)
 		exit()
-finally :
-	if proxychanged :
-		initGet = s.get(args.url,headers={"Accept-Encoding":None})
-		print(initGet.status_code)
 
 detectedForms = detectForms(initGet.text)
 
@@ -89,12 +110,12 @@ except :
 
 
 extensions = loadExtensions("mime.types")
-extensionsMalveillantes = ["php","asp"]
+nastyExtensions = ["php","asp"]
 
 
-###### DETECTION DES EXTENSIONS VALIDES POUR CE FORMULAIRE ######
+###### VALID EXTENSIONS DETECTION FOR THIS FORM ######
 logging.info("Starting detection of valid extensions ...")
-extensionsAcceptees = []
+validExtensions = []
 for ext in extensions.keys() :
 	logging.info("Trying extension %s", ext)
 	filename = randomFileNameGenerator()+"."+ext
@@ -105,30 +126,30 @@ for ext in extensions.keys() :
 	fd.close()
 	os.remove(fullpath)
 
-	fileUploaded = re.search(args.notRegexp,fu.text)
+	fileUploaded = re.search(args.notRegex,fu.text)
 	if fileUploaded == None :
 		logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext)
-		extensionsAcceptees.append(ext)
+		validExtensions.append(ext)
 #################################################################
 
-
+#still looking for a more pythonic way to do this ...
 def techniques(legitExt,badExt,extensions) :
-	retour = []
-	#retour.append(("filename.extension1.extension2","mime/type"))
-	retour.append((randomFileNameGenerator()+"."+legitExt+"."+badExt,extensions[legitExt]))
-	retour.append((randomFileNameGenerator()+"."+legitExt+"."+badExt,extensions[badExt]))
-	retour.append((randomFileNameGenerator()+"."+badExt+"."+legitExt,extensions[legitExt]))
-	retour.append((randomFileNameGenerator()+"."+badExt+"."+legitExt,extensions[badExt]))
-	retour.append((randomFileNameGenerator()+"."+legitExt+"%00."+badExt,extensions[legitExt]))
-	retour.append((randomFileNameGenerator()+"."+legitExt+"%00."+badExt,extensions[badExt]))
-	retour.append((randomFileNameGenerator()+"."+badExt+"%00."+legitExt,extensions[legitExt]))
-	retour.append((randomFileNameGenerator()+"."+badExt+"%00."+legitExt,extensions[badExt]))
+	filesToTry = []
+	#filesToTry.append(("filename.extension1.extension2","mime/type"))
+	filesToTry.append((randomFileNameGenerator()+"."+legitExt+"."+badExt,extensions[legitExt]))
+	filesToTry.append((randomFileNameGenerator()+"."+legitExt+"."+badExt,extensions[badExt]))
+	filesToTry.append((randomFileNameGenerator()+"."+badExt+"."+legitExt,extensions[legitExt]))
+	filesToTry.append((randomFileNameGenerator()+"."+badExt+"."+legitExt,extensions[badExt]))
+	filesToTry.append((randomFileNameGenerator()+"."+legitExt+"%00."+badExt,extensions[legitExt]))
+	filesToTry.append((randomFileNameGenerator()+"."+legitExt+"%00."+badExt,extensions[badExt]))
+	filesToTry.append((randomFileNameGenerator()+"."+badExt+"%00."+legitExt,extensions[legitExt]))
+	filesToTry.append((randomFileNameGenerator()+"."+badExt+"%00."+legitExt,extensions[badExt]))
 
-	return retour
+	return filesToTry
 
 suceededAttemps = []
-for legitExt in list(set(extensions) & set(extensionsAcceptees)) :
-	for badExt in extensionsMalveillantes :
+for legitExt in list(set(extensions) & set(validExtensions)) :
+	for badExt in nastyExtensions :
 		#files = [("nom.ext","mime"),("nom.ext","mime")]
 		files = techniques(legitExt,badExt,extensions)
 		for f in files :
@@ -141,7 +162,7 @@ for legitExt in list(set(extensions) & set(extensionsAcceptees)) :
 			fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
 			fd.close()
 			os.remove(fullpath)
-			fileUploaded = re.search(args.notRegexp,fu.text)
+			fileUploaded = re.search(args.notRegex,fu.text)
 			if fileUploaded == None :
 				logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mime)
 				suceededAttemps.append((filename,mime))
