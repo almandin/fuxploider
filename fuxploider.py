@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import re,requests,argparse,sys,logging,os,coloredlogs,datetime
+import re,requests,argparse,sys,logging,os,coloredlogs,datetime,platform,getpass
 from html.parser import HTMLParser
 from bs4 import BeautifulSoup
 from utils import *
@@ -35,15 +35,34 @@ print("[*] starting at "+str(now.hour)+":"+str(now.minute)+":"+str(now.second))
 postData = postDataFromStringToJSON(args.data)
 tempFolder = "/tmp"
 
+logging.debug("Checking system proxies")
+detectedOS = platform.system().lower()
+proxies = getSystemProxy(detectedOS)
+
 s = requests.Session()
+s.proxies.update(proxies)
+
 try :
 	initGet = s.get(args.url,headers={"Accept-Encoding":None})
 	if initGet.status_code < 200 or initGet.status_code > 300 :
 		logging.critical("Server responded with following status : %s - %s",initGet.status_code,initGet.reason)
 		exit()
 except Exception as e :
-	logging.critical("%s : Host unreachable",getHost(args.url))
-	exit()
+	if type(e) == requests.exceptions.ProxyError :
+		error = getProxyErrorType(e)
+		if error["status_code"] == 407 :
+			logging.error("Proxy returned 407 Authentication required.")
+			username = input("Username : ")
+			password = getpass.getpass("Password : ")
+			s.proxies.update(addProxyCreds(s.proxies,(username,password)))
+			proxychanged = True
+	else :
+		logging.critical("%s : Host unreachable",getHost(args.url))
+		exit()
+finally :
+	if proxychanged :
+		initGet = s.get(args.url,headers={"Accept-Encoding":None})
+		print(initGet.status_code)
 
 detectedForms = detectForms(initGet.text)
 

@@ -1,4 +1,4 @@
-import re,argparse,random,string
+import re,argparse,random,string,winreg
 from bs4 import BeautifulSoup
 
 def valid_url(url) :
@@ -74,3 +74,37 @@ def loadExtensions(filepath="mime.types") :
 			for z in ligne[1:] :
 				ext[z] = mime
 	return ext
+
+def getSystemProxy(detectedOS) :
+	proxies = {}
+	if detectedOS == "windows" :
+		key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings")
+		proxy = winreg.QueryValueEx(key,"ProxyServer")[0]
+		proxies["http"] = proxy
+		proxies["https"] = proxy
+	elif platform.system() == "linux" :
+		proxies["http"] = os.environ.get("http_proxy")
+		proxies["https"] = os.environ.get("https_proxy")
+	return proxies
+
+def getProxyErrorType(error) :
+	res = {}
+	if re.search("407 Proxy Authentication Required",str(error)) :
+		res["status_code"] = 407
+		res["msg"] = "Proxy Authentication Required"
+	return res
+
+def addProxyCreds(initProxy,creds) :
+	httpproxy = initProxy["http"]
+	httpsproxy = initProxy["https"]
+	if re.match("^http\://.*",httpproxy) :
+		httpproxy = "http://"+creds[0]+":"+creds[1]+"@"+httpproxy[7:]
+	else :
+		httpproxy = "http://"+creds[0]+":"+creds[1]+"@"+httpproxy
+
+	if re.match("^https\://.*",httpsproxy) :
+		httpsproxy = "https://"+creds[0]+":"+creds[1]+"@"+httpsproxy[8:]
+	else :
+		httpsproxy = "https://"+creds[0]+":"+creds[1]+"@"+httpsproxy
+	newProxies = {"http":httpproxy,"https":httpsproxy}
+	return newProxies
