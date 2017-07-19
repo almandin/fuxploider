@@ -107,6 +107,7 @@ def techniques(legitExt,badExt,extensions) :
 
 	return retour
 
+suceededAttemps = []
 for legitExt in list(set(extensions) & set(extensionsAcceptees)) :
 	for badExt in extensionsMalveillantes :
 		#files = [("nom.ext","mime"),("nom.ext","mime")]
@@ -124,3 +125,7 @@ for legitExt in list(set(extensions) & set(extensionsAcceptees)) :
 			fileUploaded = re.search(args.notRegexp,fu.text)
 			if fileUploaded == None :
 				logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mime)
+				suceededAttemps.append((filename,mime))
+
+print("End of detection phase, the following files have been uploaded meaning a potential file upload vulnerability :")
+print(suceededAttemps)
