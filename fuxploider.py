@@ -1,42 +1,60 @@
 #!/usr/bin/python3
-import re,requests,argparse,sys,logging,os
+import re,requests,argparse,sys,logging,os,coloredlogs,datetime
 from html.parser import HTMLParser
 from bs4 import BeautifulSoup
 from utils import *
-logging.basicConfig(level=logging.WARNING,format='%(asctime)s %(levelname)s - %(message)s',datefmt='[%m/%d/%Y-%H:%M:%S]')
+
+
+coloredlogs.install(fmt='%(asctime)s %(levelname)s - %(message)s', level=logging.INFO,datefmt='[%m/%d/%Y-%H:%M:%S]')
 logging.getLogger("requests").setLevel(logging.ERROR)
 
-parser = argparse.ArgumentParser(description="Detects file upload vulnerabilities given an URL")
-parser.add_argument("URL", nargs=1, help="Url de la page contenant le formulaire à tester. Exemple : http://test.fr/index.html?action=upload", type=valid_url)
-parser.add_argument("--data", help="Données à transmettre par post en plus du fichier à uploader. Exemple : 'name=test&aaa=bbb'", type=valid_postData)
-parser.add_argument("errReg", help="Regex matchant un échec d'upload", type=valid_regex)
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--data", dest="data", help="Additionnal data to be transmitted via POST method. Example : -d \"key1=value1&key2=value2\"", type=valid_postData)
+requiredNamedArgs = parser.add_argument_group('Required named arguments')
+requiredNamedArgs.add_argument("-u","--url", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
+requiredNamedArgs.add_argument("--not-regexp", help="Regex matching an upload failure", type=valid_regex, required=True,dest="notRegexp")
 
 args = parser.parse_args()
-args.URL = args.URL[0]
+
+print("""\033[1;32m
+                                     
+ ___             _     _   _         
+|  _|_ _ _ _ ___| |___|_|_| |___ ___ 
+|  _| | |_'_| . | | . | | . | -_|  _|
+|_| |___|_,_|  _|_|___|_|___|___|_|  
+            |_|                      
+
+\033[1m\033[42m{version 0.1}\033[m
+
+\033[m[!] legal disclaimer : Usage of fuxploider for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
+	""")
+
+now = datetime.datetime.now()
+print("[*] starting at "+str(now.hour)+":"+str(now.minute)+":"+str(now.second))
 
 postData = postDataFromStringToJSON(args.data)
 tempFolder = "/tmp"
 
 s = requests.Session()
 try :
-	initGet = s.get(args.URL,headers={"Accept-Encoding":None})
+	initGet = s.get(args.url,headers={"Accept-Encoding":None})
 	if initGet.status_code < 200 or initGet.status_code > 300 :
-		logging.critical("URL injoignable (%s -> %s)",args.url,initGet.status_code)
+		logging.critical("Server responded with following status : %s - %s",initGet.status_code,initGet.reason)
 		exit()
-except :
-	logging.critical("%s : Hôte injoignable",getHost(args.URL))
+except Exception as e :
+	logging.critical("%s : Host unreachable",getHost(args.url))
 	exit()
 
 detectedForms = detectForms(initGet.text)
 
 if len(detectedForms) == 0 :
-	logging.critical("Aucun formulaire html détecté sur cette URL.")
+	logging.critical("No HTML form found here")
 	exit()
 if len(detectedForms) > 1 :
-	logging.critical("%s formulaires contenant des champs d'upload de fichiers trouvés, impossible de choisir lequel utiliser.",len(detectedForms))
+	logging.critical("%s forms found containing file upload inputs, no way to choose which one to test.",len(detectedForms))
 	exit()
 if len(detectedForms[0][1]) > 1 :
-	logging.critical("%s champs d'upload de fichiers découverts dans le même formulaire, impossible de choisir lequel tester.",len(detectedForms[0]))
+	logging.critical("%s file inputs found inside the same form, no way to choose which one to test.",len(detectedForms[0]))
 	exit()
 
 fileInput = detectedForms[0][1][0]
@@ -56,9 +74,10 @@ extensionsMalveillantes = ["php","asp"]
 
 
 ###### DETECTION DES EXTENSIONS VALIDES POUR CE FORMULAIRE ######
+logging.info("Starting detection of valid extensions ...")
 extensionsAcceptees = []
 for ext in extensions.keys() :
-	logging.info("Trying extension "+ext)
+	logging.info("Trying extension %s", ext)
 	filename = randomFileNameGenerator()+"."+ext
 	fullpath = tempFolder+"/"+filename
 	open(fullpath,"wb").close()
@@ -67,12 +86,11 @@ for ext in extensions.keys() :
 	fd.close()
 	os.remove(fullpath)
 
-	fileUploaded = re.search(args.errReg,fu.text)
+	fileUploaded = re.search(args.notRegexp,fu.text)
 	if fileUploaded == None :
-		logging.warning("Extension "+ext+" acceptée !")
+		logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext)
 		extensionsAcceptees.append(ext)
 #################################################################
-print(extensionsAcceptees)
 
 
 def techniques(legitExt,badExt,extensions) :
@@ -98,11 +116,11 @@ for legitExt in list(set(extensions) & set(extensionsAcceptees)) :
 			mime = f[1]
 			fullpath = tempFolder+"/"+filename
 			open(fullpath,"wb").close()
-			logging.info("Trying file "+filename+" with mimetype "+mime)
+			logging.info("Trying file '%s' with mimetype '%s'.",filename,mime)
 			fd = open(fullpath,"rb")
 			fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
 			fd.close()
 			os.remove(fullpath)
-			fileUploaded = re.search(args.errReg,fu.text)
+			fileUploaded = re.search(args.notRegexp,fu.text)
 			if fileUploaded == None :
-				logging.warning("Fichier "+filename+" accepté avec le type mime "+mime)
+				logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mime)

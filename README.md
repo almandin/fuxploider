@@ -1,10 +1,9 @@
 # fuxploider
-File upload technique suggester tool for penetration testing web applications.
 
-In a penetration test, exploiting a file upload form can be quite tedious as there are several techniques where you have to test for many
-combinations of different file extensions, with or without null byte, with the right or the bad mime type.
+[![Python 3.5|3.6](https://img.shields.io/badge/python-3.5%2F3.6-green.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/license-GPLv2-red.svg)](https://raw.githubusercontent.com/almandin/fuxploider/master/LICENSE.md)
 
-This software tries to help automating stuff, generating every combination of extensions, null bytes and mime types.
+fuxploider is an open source penetration testing tool that automates the process of detecting and exploiting file upload forms flaws. This tool is able to detect the file types allowed to be uploaded and is able to detect which technique will work best tu upload web shells or any malicious file on the desired web server.
+
 
 ### Use
 
@@ -18,5 +17,4 @@ errReg : regular expression matching a failed upload (bad extension or similar) 
 
 --data : additionnal post data to be sent with the form
 
-For educational purpose only, the mainteners of this project can't be responsible for any of your activities using this piece of software.
-No warranty that it just works.
+[!] legal disclaimer : Usage of fuxploider for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
