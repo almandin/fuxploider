@@ -1,4 +1,44 @@
+image/jpeg jpeg jpg jpe
+image/png png
+image/gif gif
+image/x-ms-bmp bmp
+image/tiff tiff tif
+text/plain asc txt text pot brf srt
+application/pdf pdf
+application/msword doc dot
+application/vnd.openxmlformats-officedocument.presentationml.presentation pptx
+application/vnd.openxmlformats-officedocument.presentationml.slide sldx
+application/vnd.openxmlformats-officedocument.presentationml.slideshow ppsx
+application/vnd.openxmlformats-officedocument.presentationml.template potx
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet xlsx
+application/vnd.openxmlformats-officedocument.spreadsheetml.template xltx
+application/vnd.openxmlformats-officedocument.wordprocessingml.document docx
+application/vnd.openxmlformats-officedocument.wordprocessingml.template dotx
+application/font-sfnt otf ttf
+application/gzip gz
+application/zip zip
+application/x-7z-compressed 7z
+application/rar rar
+application/postscript ps ai eps epsi epsf eps2 eps3
+application/javascript js
+application/json json
+application/rdf+xml rdf
+application/rtf rtf
+application/ecmascript es
+application/vnd.ms-excel xls xlb xlt
+application/vnd.ms-excel.addin.macroEnabled.12 xlam
+application/vnd.ms-excel.sheet.binary.macroEnabled.12 xlsb
+application/vnd.ms-excel.sheet.macroEnabled.12 xlsm
+application/vnd.ms-excel.template.macroEnabled.12 xltm
 application/andrew-inset ez
+application/vnd.ms-powerpoint ppt pps
+application/vnd.ms-powerpoint.addin.macroEnabled.12 ppam
+application/vnd.ms-powerpoint.presentation.macroEnabled.12 pptm
+application/vnd.ms-powerpoint.slide.macroEnabled.12 sldm
+application/vnd.ms-powerpoint.slideshow.macroEnabled.12 ppsm
+application/vnd.ms-powerpoint.template.macroEnabled.12 potm
+application/vnd.ms-word.document.macroEnabled.12 docm
+application/vnd.ms-word.template.macroEnabled.12 dotm
 application/annodex anx
 application/atom+xml atom
 application/atomcat+xml atomcat
@@ -8,40 +48,29 @@ application/cu-seeme cu
 application/davmount+xml davmount
 application/dicom dcm
 application/dsptype tsp
-application/ecmascript es
-application/font-sfnt otf ttf
 application/font-tdpfr pfr
 application/font-woff woff
 application/futuresplash spl
-application/gzip gz
 application/hta hta
 application/java-archive jar
 application/java-serialized-object ser
 application/java-vm class
-application/javascript js
-application/json json
 application/m3g m3g
 application/mac-binhex40 hqx
 application/mac-compactpro cpt
 application/mathematica nb nbp
 application/mbox mbox
 application/msaccess mdb
-application/msword doc dot
 application/mxf mxf
 application/octet-stream bin deploy msu msp
 application/oda oda
 application/oebps-package+xml opf
 application/ogg ogx
 application/onenote one onetoc2 onetmp onepkg
-application/pdf pdf
 application/pgp-encrypted pgp
 application/pgp-keys key
 application/pgp-signature sig
 application/pics-rules prf
-application/postscript ps ai eps epsi epsf eps2 eps3
-application/rar rar
-application/rdf+xml rdf
-application/rtf rtf
 application/sla stl
 application/smil+xml smi smil
 application/xhtml+xml xhtml xht
@@ -49,7 +78,6 @@ application/xml xml xsd
 text/asp asp
 application/xslt+xml xsl xslt
 application/xspf+xml xspf
-application/zip zip
 application/vnd.android.package-archive apk
 application/vnd.cinderella cdy
 application/vnd.debian.binary-package deb ddeb udeb
@@ -57,23 +85,10 @@ application/vnd.font-fontforge-sfd sfd
 application/vnd.google-earth.kml+xml kml
 application/vnd.google-earth.kmz kmz
 application/vnd.mozilla.xul+xml xul
-application/vnd.ms-excel xls xlb xlt
-application/vnd.ms-excel.addin.macroEnabled.12 xlam
-application/vnd.ms-excel.sheet.binary.macroEnabled.12 xlsb
-application/vnd.ms-excel.sheet.macroEnabled.12 xlsm
-application/vnd.ms-excel.template.macroEnabled.12 xltm
 application/vnd.ms-fontobject eot
 application/vnd.ms-officetheme thmx
 application/vnd.ms-pki.seccat cat
 application/vnd.ms-pki.stl stl
-application/vnd.ms-powerpoint ppt pps
-application/vnd.ms-powerpoint.addin.macroEnabled.12 ppam
-application/vnd.ms-powerpoint.presentation.macroEnabled.12 pptm
-application/vnd.ms-powerpoint.slide.macroEnabled.12 sldm
-application/vnd.ms-powerpoint.slideshow.macroEnabled.12 ppsm
-application/vnd.ms-powerpoint.template.macroEnabled.12 potm
-application/vnd.ms-word.document.macroEnabled.12 docm
-application/vnd.ms-word.template.macroEnabled.12 dotm
 application/vnd.oasis.opendocument.chart odc
 application/vnd.oasis.opendocument.database odb
 application/vnd.oasis.opendocument.formula odf
@@ -88,14 +103,6 @@ application/vnd.oasis.opendocument.text odt
 application/vnd.oasis.opendocument.text-master odm
 application/vnd.oasis.opendocument.text-template ott
 application/vnd.oasis.opendocument.text-web oth
-application/vnd.openxmlformats-officedocument.presentationml.presentation pptx
-application/vnd.openxmlformats-officedocument.presentationml.slide sldx
-application/vnd.openxmlformats-officedocument.presentationml.slideshow ppsx
-application/vnd.openxmlformats-officedocument.presentationml.template potx
-application/vnd.openxmlformats-officedocument.spreadsheetml.sheet xlsx
-application/vnd.openxmlformats-officedocument.spreadsheetml.template xltx
-application/vnd.openxmlformats-officedocument.wordprocessingml.document docx
-application/vnd.openxmlformats-officedocument.wordprocessingml.template dotx
 application/vnd.rim.cod cod
 application/vnd.smaf mmf
 application/vnd.stardivision.calc sdc
@@ -124,7 +131,6 @@ application/vnd.wap.wmlscriptc wmlsc
 application/vnd.wordperfect wpd
 application/vnd.wordperfect5.1 wp5
 application/x-123 wk
-application/x-7z-compressed 7z
 application/x-abiword abw
 application/x-apple-diskimage dmg
 application/x-bcpio bcpio
@@ -309,16 +315,12 @@ chemical/x-vamas-iso14976 vms
 chemical/x-vmd vmd
 chemical/x-xtel xtel
 chemical/x-xyz xyz
-image/gif gif
 image/ief ief
 image/jp2 jp2 jpg2
-image/jpeg jpeg jpg jpe
 image/jpm jpm
 image/jpx jpx jpf
 image/pcx pcx
-image/png png
 image/svg+xml svg svgz
-image/tiff tiff tif
 image/vnd.djvu djvu djv
 image/vnd.microsoft.icon ico
 image/vnd.wap.wbmp wbmp
@@ -332,7 +334,6 @@ image/x-corelphotopaint cpt
 image/x-epson-erf erf
 image/x-jg art
 image/x-jng jng
-image/x-ms-bmp bmp
 image/x-nikon-nef nef
 image/x-olympus-orf orf
 image/x-photoshop psd
@@ -359,7 +360,6 @@ text/h323 323
 text/html html htm shtml
 text/iuls uls
 text/mathml mml
-text/plain asc txt text pot brf srt
 text/richtext rtx
 text/scriptlet sct wsc
 text/texmacs tm

@@ -6,21 +6,34 @@ def valid_url(url) :
 	if exp.match(url) :
 		return url
 	else :
-		raise argparse.ArgumentTypeError("Le type de paramètre attendu est une URL valide")
+		raise argparse.ArgumentTypeError("The given URL argument does not look like a standard URL.")
 		return False
-
+def valid_proxyString(proxyString) :
+	exp = re.compile("^(?:(https?):\/\/)?(?:(.+?):(.+?)@)?([A-Za-z0-9\_\-\~\.]+)(?::([0-9]+))?$")
+	r = exp.match(proxyString)
+	if r :
+		return {"username":r.group(2),"password":r.group(3),"protocol":r.group(1),"hostname":r.group(4),"port":r.group(5)}
+	else :
+		raise argparse.ArgumentTypeError("Proxy information must be like \"[user:pass@]host:port\". Example : \"user:pass@proxy.host:8080\".")
 def valid_regex(regex) :
 	try :
 		re.compile(regex)
 	except re.error :
-		raise argparse.ArgumentTypeError("Le type de paramètre attendu est une expression régulière valide")
+		raise argparse.ArgumentTypeError("The given regex argument does not look like a valid regular expression.")
 	return regex
+def valid_proxyCreds(creds) :
+	exp = re.compile("^([^\n\t :]+):([^\n\t :]+)$")
+	r = exp.match(creds)
+	if r :
+		return {"username":r.group(1),"password":r.group(2)}
+	else :
+		raise argparse.ArgumentTypeError("Proxy credentials must follow the next format : 'user:pass'. Provided : '"+creds+"'")
 def valid_postData(data) :
 	exp = re.compile("([^=&?\n]*=[^=&?\n]*&?)+")
 	if exp.match(data) :
 		return data
 	else :
-		raise argparse.ArgumentTypeError("Les données POST doivent être écrites sous la forme 'key1=value1&key2=value2&...'")
+		raise argparse.ArgumentTypeError("Additionnal POST data must be written like the following : 'key1=value1&key2=value2&...'")
 def getHost(url) :
 	exp = re.compile("^(https?\:\/\/)((([\da-z\.-]+)\.([a-z\.]{2,6}))|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(:[0-9]+)?([\/\w \.-]*)\/?([\/\w \.-]*)\/?((\?|&).+?(=.+?)?)*$")
 	res = exp.match(url)
@@ -74,3 +87,18 @@ def loadExtensions(filepath="mime.types") :
 			for z in ligne[1:] :
 				ext[z] = mime
 	return ext
+
+def addProxyCreds(initProxy,creds) :
+	httpproxy = initProxy["http"]
+	httpsproxy = initProxy["https"]
+	if re.match("^http\://.*",httpproxy) :
+		httpproxy = "http://"+creds[0]+":"+creds[1]+"@"+httpproxy[7:]
+	else :
+		httpproxy = "http://"+creds[0]+":"+creds[1]+"@"+httpproxy
+
+	if re.match("^https\://.*",httpsproxy) :
+		httpsproxy = "https://"+creds[0]+":"+creds[1]+"@"+httpsproxy[8:]
+	else :
+		httpsproxy = "https://"+creds[0]+":"+creds[1]+"@"+httpsproxy
+	newProxies = {"http":httpproxy,"https":httpsproxy}
+	return newProxies
