@@ -1,4 +1,4 @@
-import re,argparse,random,string
+import re,argparse
 from bs4 import BeautifulSoup
 
 def valid_url(url) :
@@ -71,10 +71,6 @@ def getResource(url) :
 	r = exp.match(url)
 	z = r.group(7).split('/')
 	return z[len(z)-1]
-
-
-def randomFileNameGenerator(size=8, chars=string.ascii_uppercase + string.digits + string.ascii_lowercase) :
-	return ''.join(random.choice(chars) for _ in range(size))
 
 def loadExtensions(filepath="mime.types") :
 	with open(filepath, "r") as fd :

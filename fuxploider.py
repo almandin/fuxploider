@@ -1,6 +1,5 @@
 #!/usr/bin/python3
-import re,requests,argparse,sys,logging,os,coloredlogs,datetime,getpass
-from bs4 import BeautifulSoup
+import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile
 from utils import *
 
 
@@ -41,7 +40,7 @@ now = datetime.datetime.now()
 print("[*] starting at "+str(now.hour)+":"+str(now.minute)+":"+str(now.second))
 
 postData = postDataFromStringToJSON(args.data)
-tempFolder = "/tmp"
+
 s = requests.Session()
 s.trust_env = False
 if args.proxy :
@@ -103,7 +102,7 @@ try :
 	action = formDestination["action"]
 	schema = "https" if initGet.url[0:5] == "https" else "http"
 	host = getHost(initGet.url)
-	uploadURL = schema+"://"+host+action
+	uploadURL = schema+"://"+host+"/"+action
 except :
 	uploadURL = initGet.url
 
@@ -118,14 +117,8 @@ logging.info("Starting detection of valid extensions ...")
 validExtensions = []
 for ext in extensions.keys() :
 	logging.info("Trying extension %s", ext)
-	filename = randomFileNameGenerator()+"."+ext
-	fullpath = tempFolder+"/"+filename
-	open(fullpath,"wb").close()
-	fd = open(fullpath,"rb")
-	fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,extensions[ext])},data=postData)
-	fd.close()
-	os.remove(fullpath)
-
+	with tempfile.TemporaryFile(suffix="."+ext) as fd :
+		fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,extensions[ext])},data=postData)
 	fileUploaded = re.search(args.notRegex,fu.text)
 	if fileUploaded == None :
 		logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext)
@@ -136,14 +129,14 @@ for ext in extensions.keys() :
 def techniques(legitExt,badExt,extensions) :
 	filesToTry = []
 	#filesToTry.append(("filename.extension1.extension2","mime/type"))
-	filesToTry.append((randomFileNameGenerator()+"."+legitExt+"."+badExt,extensions[legitExt]))
-	filesToTry.append((randomFileNameGenerator()+"."+legitExt+"."+badExt,extensions[badExt]))
-	filesToTry.append((randomFileNameGenerator()+"."+badExt+"."+legitExt,extensions[legitExt]))
-	filesToTry.append((randomFileNameGenerator()+"."+badExt+"."+legitExt,extensions[badExt]))
-	filesToTry.append((randomFileNameGenerator()+"."+legitExt+"%00."+badExt,extensions[legitExt]))
-	filesToTry.append((randomFileNameGenerator()+"."+legitExt+"%00."+badExt,extensions[badExt]))
-	filesToTry.append((randomFileNameGenerator()+"."+badExt+"%00."+legitExt,extensions[legitExt]))
-	filesToTry.append((randomFileNameGenerator()+"."+badExt+"%00."+legitExt,extensions[badExt]))
+	filesToTry.append(("."+legitExt+"."+badExt,extensions[legitExt]))
+	filesToTry.append(("."+legitExt+"."+badExt,extensions[badExt]))
+	filesToTry.append(("."+badExt+"."+legitExt,extensions[legitExt]))
+	filesToTry.append(("."+badExt+"."+legitExt,extensions[badExt]))
+	filesToTry.append(("."+legitExt+"%00."+badExt,extensions[legitExt]))
+	filesToTry.append(("."+legitExt+"%00."+badExt,extensions[badExt]))
+	filesToTry.append(("."+badExt+"%00."+legitExt,extensions[legitExt]))
+	filesToTry.append(("."+badExt+"%00."+legitExt,extensions[badExt]))
 
 	return filesToTry
 
@@ -153,15 +146,13 @@ for legitExt in list(set(extensions) & set(validExtensions)) :
 		#files = [("nom.ext","mime"),("nom.ext","mime")]
 		files = techniques(legitExt,badExt,extensions)
 		for f in files :
-			filename = f[0]
+			fileSuffix = f[0]
 			mime = f[1]
-			fullpath = tempFolder+"/"+filename
-			open(fullpath,"wb").close()
-			logging.info("Trying file '%s' with mimetype '%s'.",filename,mime)
-			fd = open(fullpath,"rb")
-			fu = s.post(uploadURL,files={fileInput["name"]:(filename,fd,mime)},data=postData)
-			fd.close()
-			os.remove(fullpath)
+			filename=""
+			with tempfile.TemporaryFile(suffix=fileSuffix) as fd :
+				logging.info("Trying file '%s' with mimetype '%s'.",os.path.basename(fd.name),mime)
+				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,mime)},data=postData)
+				filename = os.path.basename(fd.name)
 			fileUploaded = re.search(args.notRegex,fu.text)
 			if fileUploaded == None :
 				logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mime)
