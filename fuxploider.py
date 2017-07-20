@@ -43,8 +43,8 @@ print("[*] starting at "+str(now.hour)+":"+str(now.minute)+":"+str(now.second))
 postData = postDataFromStringToJSON(args.data)
 tempFolder = "/tmp"
 s = requests.Session()
+s.trust_env = False
 if args.proxy :
-	s.trust_env = False
 	if args.proxy["username"] and args.proxy["password"] and args.proxyCreds :
 		logging.warning("Proxy username and password provided by the --proxy-creds switch replaces credentials provided using the --proxy switch")
 	if args.proxyCreds :
