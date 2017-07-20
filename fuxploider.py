@@ -74,7 +74,7 @@ if args.proxy :
 	else :
 		proxies = {"http":proxy,"https":proxy}
 
-	s.proxies = proxies
+	s.proxies.update(proxies)
 
 try :
 	initGet = s.get(args.url,headers={"Accept-Encoding":None})
