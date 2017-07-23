@@ -130,7 +130,7 @@ for ext in extensions :
 	if n < args.n :
 		#ext = (ext,mime)
 		n += 1
-		logging.info("Trying extension %s", ext[0])
+		logging.debug("Trying extension %s", ext[0])
 		with tempfile.NamedTemporaryFile(suffix="."+ext[0]) as fd :
 			fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,ext[1])},data=postData)
 		if args.notRegex :
@@ -187,7 +187,7 @@ for legitExt in intersect :
 			mime = f[1]
 			filename=""
 			with tempfile.NamedTemporaryFile(suffix=fileSuffix) as fd :
-				logging.info("Trying file '%s' with mimetype '%s'.",os.path.basename(fd.name),mime)
+				logging.debug("Trying file '%s' with mimetype '%s'.",os.path.basename(fd.name),mime)
 				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,mime)},data=postData)
 				filename = os.path.basename(fd.name)
 			if args.notRegex :
@@ -212,5 +212,5 @@ for legitExt in intersect :
 						success = True
 
 
-print("End of detection phase, the following files have been uploaded meaning a potential file upload vulnerability :")
+logging.debug("End of detection phase, the following files have been uploaded meaning a potential file upload vulnerability :")
 print(succeededAttempts)
