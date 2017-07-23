@@ -1,0 +1,103 @@
+application/x-cbr cbr
+application/x-cdlink vcd
+application/x-tar tar
+application/x-rss+xml rss
+text/css css
+application/vnd.oasis.opendocument.text odt
+application/x-trash ~ % bak old sik
+application/pdf pdf
+image/gif gif
+application/x-bittorrent torrent
+video/quicktime qt mov
+application/octet-stream bin deploy msu msp
+audio/midi mid midi kar
+text/html html htm shtml
+application/x-msdos-program com exe bat dll
+video/x-msvideo avi
+image/vnd.microsoft.icon ico
+application/font-sfnt otf ttf
+application/x-msdos-program com exe bat dll
+chemical/x-cerius cer
+application/vnd.stardivision.math sdf
+chemical/x-mdl-sdfile sd sdf
+application/zip zip
+application/vnd.openxmlformats-officedocument.presentationml.presentation pptx
+text/vcard vcf vcard
+text/x-c++src c++ cpp cxx cc
+text/x-chdr h
+video/mpeg mpeg mpg mpe
+application/vnd.google-earth.kmz kmz
+application/x-shockwave-flash swf swfl
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet xlsx
+application/vnd.debian.binary-package deb ddeb udeb
+application/x-debian-package deb udeb
+application/javascript js
+application/vnd.ms-excel xls xlb xlt
+text/csv csv
+application/x-stuffit sit sitx
+application/java-vm class
+application/mac-binhex40 hqx
+image/tiff tiff tif
+audio/mpeg mpga mpega mp2 mp3 m4a
+application/x-sql sql
+text/html html htm shtml
+audio/x-pn-realaudio ra rm ram
+application/rar rar
+image/png png
+text/x-perl pl pm
+application/x-iso9660-image iso
+application/gzip gz
+application/rtf rtf
+application/x-7z-compressed 7z
+text/asp asp
+application/x-httpd-php phtml pht php
+application/x-sh sh
+text/x-sh sh
+application/java-archive jar
+audio/mpegurl m3u
+audio/x-mpegurl m3u
+text/x-csrc c
+application/x-msdos-program com exe bat dll
+image/x-ms-bmp bmp
+video/3gpp 3gp
+application/vnd.android.package-archive apk
+application/x-msdos-program com exe bat dll
+text/plain asc txt text pot brf srt
+chemical/x-gamess-input inp gam gamin
+image/jpeg jpeg jpg jpe
+image/tiff tiff tif
+application/postscript ps ai eps epsi epsf eps2 eps3
+text/x-tex tex ltx sty cls
+application/font-sfnt otf ttf
+image/x-photoshop psd
+application/msaccess mdb
+video/x-ms-wmv wmv
+application/vnd.google-earth.kml+xml kml
+image/svg+xml svg svgz
+audio/x-aiff aif aiff aifc
+application/vnd.ms-powerpoint ppt pps
+chemical/x-pdb pdb ent
+application/vnd.ms-powerpoint ppt pps
+application/msword doc dot
+video/x-ms-asf asf asx
+application/pics-rules prf
+video/x-flv flv
+video/mp4 mp4
+text/x-java java
+audio/x-ms-wma wma
+application/postscript ps ai eps epsi epsf eps2 eps3
+application/x-cab cab
+application/x-apple-diskimage dmg
+audio/mpeg mpga mpega mp2 mp3 m4a
+application/vnd.openxmlformats-officedocument.wordprocessingml.document docx
+application/pgp-keys key
+text/plain asc txt text pot brf srt
+text/calendar ics icz
+application/xhtml+xml xhtml xht
+application/xml xml xsd
+application/postscript ps ai eps epsi epsf eps2 eps3
+application/vnd.wordperfect wpd
+application/x-msi msi
+application/x-redhat-package-manager rpm
+text/x-python py
+audio/x-wav wav
