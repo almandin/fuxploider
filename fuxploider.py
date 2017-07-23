@@ -2,6 +2,7 @@
 import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile
 from utils import *
 
+version = "0.1.4"
 
 coloredlogs.install(fmt='%(asctime)s %(levelname)s - %(message)s', level=logging.INFO,datefmt='[%m/%d/%Y-%H:%M:%S]')
 logging.getLogger("requests").setLevel(logging.ERROR)
@@ -13,13 +14,17 @@ parser.add_argument("--proxy-creds",metavar="credentials",nargs='?',const=True,d
 parser.add_argument("-n",metavar="n",nargs=1,default=["100"],dest="n",help="Number of common extensions to use. Example : -n 100")
 requiredNamedArgs = parser.add_argument_group('Required named arguments')
 requiredNamedArgs.add_argument("-u","--url", metavar="target", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
-requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex, required=True,dest="notRegex")
+requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex,dest="notRegex")
+requiredNamedArgs.add_argument("--true-regex",metavar="regex", help="Regex matchin an upload success", type=valid_regex, dest="trueRegex")
 
 args = parser.parse_args()
 
 if args.proxyCreds and args.proxy == None :
 	parser.error("--proxy-creds must be used with --proxy.")
 args.n = int(args.n[0])
+
+if not args.notRegex and not args.trueRegex :
+	parser.error("At least one detection method must be provided, either with --not-regex or with --true-regex.")
 
 print("""\033[1;32m
                                      
@@ -29,7 +34,7 @@ print("""\033[1;32m
 |_| |___|_,_|  _|_|___|_|___|___|_|  
             |_|                      
 
-\033[1m\033[42m{version 0.1}\033[m
+\033[1m\033[42m{version """+version+"""}\033[m
 
 \033[m[!] legal disclaimer : Usage of fuxploider for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
 	""")
@@ -121,16 +126,31 @@ logging.info("### Starting detection of valid extensions ...")
 n = 0
 validExtensions = []
 for ext in extensions :
+	validExt = False
 	if n < args.n :
 		#ext = (ext,mime)
 		n += 1
 		logging.info("Trying extension %s", ext[0])
 		with tempfile.NamedTemporaryFile(suffix="."+ext[0]) as fd :
 			fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,ext[1])},data=postData)
-		fileUploaded = re.search(args.notRegex,fu.text)
-		if fileUploaded == None :
-			logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
-			validExtensions.append(ext[0])
+		if args.notRegex :
+			fileUploaded = re.search(args.notRegex,fu.text)
+			if fileUploaded == None :
+				logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
+				validExtensions.append(ext[0])
+				validExt = True
+				if args.trueRegex :
+					moreInfo = re.search(args.trueRegex,fu.text)
+					if moreInfo :
+						logging.info("\033[1m\033[42mTrue regex matched the following information : %s\033[m",moreInfo.groups())
+		if args.trueRegex :#sinon si args.trueRegex :
+			if not validExt :
+				fileUploaded = re.search(args.trueRegex,fu.text)
+				if fileUploaded :
+					logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
+					logging.info("\033[1m\033[42mRegex matched the following information : %s\033[m",fileUploaded.groups())
+					validExtensions.append(ext[0])
+					validExt = True
 	else :
 		break
 logging.info("### Tried %s extensions, %s are valid.",n,len(validExtensions))
@@ -152,7 +172,7 @@ def techniques(legitExt,badExt,extensions) :
 
 	return filesToTry
 
-suceededAttemps = []
+succeededAttempts = []
 toutesLesExtensions = [x[0] for x in extensions]
 
 intersect = list(set(toutesLesExtensions) & set(validExtensions))
@@ -162,6 +182,7 @@ for legitExt in intersect :
 		#files = [("nom.ext","mime"),("nom.ext","mime")]
 		files = techniques(legitExt,badExt,extensions)
 		for f in files :
+			success = False
 			fileSuffix = f[0]
 			mime = f[1]
 			filename=""
@@ -169,10 +190,27 @@ for legitExt in intersect :
 				logging.info("Trying file '%s' with mimetype '%s'.",os.path.basename(fd.name),mime)
 				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,mime)},data=postData)
 				filename = os.path.basename(fd.name)
-			fileUploaded = re.search(args.notRegex,fu.text)
-			if fileUploaded == None :
-				logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mime)
-				suceededAttemps.append((filename,mime))
+			if args.notRegex :
+				fileUploaded = re.search(args.notRegex,fu.text)
+				if fileUploaded == None :
+					logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mime)
+					succeededAttempts.append((filename,mime))
+					success = True
+					if args.trueRegex :
+						moreInfo = re.search(args.trueRegex,fu.text)
+						if moreInfo :
+							logging.info("\033[1m\033[42mTrue regex matched the following information : %s\033[m",moreInfo.groups())
+			if args.trueRegex :
+				if not success :
+					fileUploaded = re.search(args.trueRegex,fu.text)
+					if fileUploaded :
+						succeededAttempts.append((filename,mime))
+						logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mime)
+						moreInfo = re.search(args.trueRegex,fu.text)
+						if moreInfo :
+							logging.info("\033[1m\033[42mTrue regex matched the following information : %s\033[m",moreInfo.groups())
+						success = True
+
 
 print("End of detection phase, the following files have been uploaded meaning a potential file upload vulnerability :")
-print(suceededAttemps)
+print(succeededAttempts)
