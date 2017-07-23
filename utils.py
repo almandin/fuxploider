@@ -65,6 +65,10 @@ def detectForms(html) :
 				returnForms.append((f,fileInputs))
 
 	return returnForms
+def getMime(extensions,ext) :
+	for e in extensions :
+		if e[0] == ext :
+			return e[1]
 
 def getResource(url) :
 	exp = re.compile("^(https?\:\/\/)((([\da-z\.-]+)\.([a-z\.]{2,6}))|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(:[0-9]+)?([\/\w \.-]*)\/?([\/\w \.-]*)\/?((\?|&).+?(=.+?)?)*$")
@@ -72,16 +76,16 @@ def getResource(url) :
 	z = r.group(7).split('/')
 	return z[len(z)-1]
 
-def loadExtensions(filepath="mime.types") :
+def loadExtensions(filepath="mimeTypes.advanced") :
 	with open(filepath, "r") as fd :
-		#ext = {"jpg":"application/jpeg",...}
-		ext = {}
+		#ext = [(ext,mime)]
+		ext = []
 		for e in fd :
 			e = e[:-1]
 			ligne = e.split(" ")
 			mime = ligne[0]
 			for z in ligne[1:] :
-				ext[z] = mime
+				ext.append((z,mime))
 	return ext
 
 def addProxyCreds(initProxy,creds) :

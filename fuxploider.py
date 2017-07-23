@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--data", metavar="postData",dest="data", help="Additionnal data to be transmitted via POST method. Example : -d \"key1=value1&key2=value2\"", type=valid_postData)
 parser.add_argument("--proxy", metavar="proxyUrl", dest="proxy", help="Proxy information. Example : --proxy \"user:password@proxy.host:8080\"", type=valid_proxyString)
 parser.add_argument("--proxy-creds",metavar="credentials",nargs='?',const=True,dest="proxyCreds",help="Prompt for proxy credentials at runtime. Format : 'user:pass'",type=valid_proxyCreds)
+parser.add_argument("-n",metavar="n",nargs=1,default=["100"],dest="n",help="Number of common extensions to use. Example : -n 100")
 requiredNamedArgs = parser.add_argument_group('Required named arguments')
 requiredNamedArgs.add_argument("-u","--url", metavar="target", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
 requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex, required=True,dest="notRegex")
@@ -18,6 +19,7 @@ args = parser.parse_args()
 
 if args.proxyCreds and args.proxy == None :
 	parser.error("--proxy-creds must be used with --proxy.")
+args.n = int(args.n[0])
 
 print("""\033[1;32m
                                      
@@ -37,6 +39,8 @@ if args.proxyCreds == True :
 	args.proxyCreds["password"] = getpass.getpass("Proxy password : ")
 
 now = datetime.datetime.now()
+mimeFiles = "mimeTypes.advanced"
+
 print("[*] starting at "+str(now.hour)+":"+str(now.minute)+":"+str(now.second))
 
 postData = postDataFromStringToJSON(args.data)
@@ -108,40 +112,52 @@ except :
 
 
 
-extensions = loadExtensions("mime.types")
+extensions = loadExtensions(mimeFiles)
 nastyExtensions = ["php","asp"]
 
 
 ###### VALID EXTENSIONS DETECTION FOR THIS FORM ######
-logging.info("Starting detection of valid extensions ...")
+logging.info("### Starting detection of valid extensions ...")
+n = 0
 validExtensions = []
-for ext in extensions.keys() :
-	logging.info("Trying extension %s", ext)
-	with tempfile.TemporaryFile(suffix="."+ext) as fd :
-		fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,extensions[ext])},data=postData)
-	fileUploaded = re.search(args.notRegex,fu.text)
-	if fileUploaded == None :
-		logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext)
-		validExtensions.append(ext)
-#################################################################
+for ext in extensions :
+	if n < args.n :
+		#ext = (ext,mime)
+		n += 1
+		logging.info("Trying extension %s", ext[0])
+		with tempfile.NamedTemporaryFile(suffix="."+ext[0]) as fd :
+			fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,ext[1])},data=postData)
+		fileUploaded = re.search(args.notRegex,fu.text)
+		if fileUploaded == None :
+			logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
+			validExtensions.append(ext[0])
+	else :
+		break
+logging.info("### Tried %s extensions, %s are valid.",n,len(validExtensions))
 
+#################################################################
+logging.info("### Starting messing with file extensions and mime types...")
 #still looking for a more pythonic way to do this ...
 def techniques(legitExt,badExt,extensions) :
 	filesToTry = []
 	#filesToTry.append(("filename.extension1.extension2","mime/type"))
-	filesToTry.append(("."+legitExt+"."+badExt,extensions[legitExt]))
-	filesToTry.append(("."+legitExt+"."+badExt,extensions[badExt]))
-	filesToTry.append(("."+badExt+"."+legitExt,extensions[legitExt]))
-	filesToTry.append(("."+badExt+"."+legitExt,extensions[badExt]))
-	filesToTry.append(("."+legitExt+"%00."+badExt,extensions[legitExt]))
-	filesToTry.append(("."+legitExt+"%00."+badExt,extensions[badExt]))
-	filesToTry.append(("."+badExt+"%00."+legitExt,extensions[legitExt]))
-	filesToTry.append(("."+badExt+"%00."+legitExt,extensions[badExt]))
+	filesToTry.append(("."+legitExt+"."+badExt,getMime(extensions,legitExt)))
+	filesToTry.append(("."+legitExt+"."+badExt,getMime(extensions,badExt)))
+	filesToTry.append(("."+badExt+"."+legitExt,getMime(extensions,legitExt)))
+	filesToTry.append(("."+badExt+"."+legitExt,getMime(extensions,badExt)))
+	filesToTry.append(("."+legitExt+"%00."+badExt,getMime(extensions,legitExt)))
+	filesToTry.append(("."+legitExt+"%00."+badExt,getMime(extensions,badExt)))
+	filesToTry.append(("."+badExt+"%00."+legitExt,getMime(extensions,legitExt)))
+	filesToTry.append(("."+badExt+"%00."+legitExt,getMime(extensions,badExt)))
 
 	return filesToTry
 
 suceededAttemps = []
-for legitExt in list(set(extensions) & set(validExtensions)) :
+toutesLesExtensions = [x[0] for x in extensions]
+
+intersect = list(set(toutesLesExtensions) & set(validExtensions))
+
+for legitExt in intersect :
 	for badExt in nastyExtensions :
 		#files = [("nom.ext","mime"),("nom.ext","mime")]
 		files = techniques(legitExt,badExt,extensions)
@@ -149,7 +165,7 @@ for legitExt in list(set(extensions) & set(validExtensions)) :
 			fileSuffix = f[0]
 			mime = f[1]
 			filename=""
-			with tempfile.TemporaryFile(suffix=fileSuffix) as fd :
+			with tempfile.NamedTemporaryFile(suffix=fileSuffix) as fd :
 				logging.info("Trying file '%s' with mimetype '%s'.",os.path.basename(fd.name),mime)
 				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,mime)},data=postData)
 				filename = os.path.basename(fd.name)
