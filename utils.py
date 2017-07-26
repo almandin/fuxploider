@@ -28,6 +28,12 @@ def valid_proxyCreds(creds) :
 		return {"username":r.group(1),"password":r.group(2)}
 	else :
 		raise argparse.ArgumentTypeError("Proxy credentials must follow the next format : 'user:pass'. Provided : '"+creds+"'")
+
+def valid_nArg(n) :
+	if int(n) > 0 :
+		return n
+	else :
+		raise argparse.ArgumentTypeError("Positive integer expected.")
 def valid_postData(data) :
 	exp = re.compile("([^=&?\n]*=[^=&?\n]*&?)+")
 	if exp.match(data) :
@@ -76,16 +82,31 @@ def getResource(url) :
 	z = r.group(7).split('/')
 	return z[len(z)-1]
 
-def loadExtensions(filepath="mimeTypes.advanced") :
-	with open(filepath, "r") as fd :
-		#ext = [(ext,mime)]
-		ext = []
-		for e in fd :
-			e = e[:-1]
-			ligne = e.split(" ")
-			mime = ligne[0]
-			for z in ligne[1:] :
-				ext.append((z,mime))
+def loadExtensions(loadFrom,filepath="mimeTypes.advanced") :
+	ext = []
+	if loadFrom == "file" :
+		with open(filepath, "r") as fd :
+			#ext = [(ext,mime)]
+			ext = []
+			for e in fd :
+				e = e[:-1]
+				ligne = e.split(" ")
+				mime = ligne[0]
+				for z in ligne[1:] :
+					ext.append((z,mime))
+	elif type(loadFrom) == type([]) :
+		for askedExt in loadFrom :
+			with open(filepath, "r") as fd :
+				for e in fd :
+					e = e[:-1]
+					ligne = e.split(" ")
+					mime = ligne[0]
+
+					if askedExt in ligne :
+						ext.append((askedExt,mime))
+	else :
+		pass
+
 	return ext
 
 def addProxyCreds(initProxy,creds) :

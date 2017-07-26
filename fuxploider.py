@@ -11,20 +11,35 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--data", metavar="postData",dest="data", help="Additionnal data to be transmitted via POST method. Example : -d \"key1=value1&key2=value2\"", type=valid_postData)
 parser.add_argument("--proxy", metavar="proxyUrl", dest="proxy", help="Proxy information. Example : --proxy \"user:password@proxy.host:8080\"", type=valid_proxyString)
 parser.add_argument("--proxy-creds",metavar="credentials",nargs='?',const=True,dest="proxyCreds",help="Prompt for proxy credentials at runtime. Format : 'user:pass'",type=valid_proxyCreds)
-parser.add_argument("-n",metavar="n",nargs=1,default=["100"],dest="n",help="Number of common extensions to use. Example : -n 100")
+
 requiredNamedArgs = parser.add_argument_group('Required named arguments')
 requiredNamedArgs.add_argument("-u","--url", metavar="target", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
 requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex,dest="notRegex")
 requiredNamedArgs.add_argument("--true-regex",metavar="regex", help="Regex matchin an upload success", type=valid_regex, dest="trueRegex")
 
+exclusiveArgs = parser.add_mutually_exclusive_group()
+exclusiveArgs.add_argument("-l","--legit-extensions",metavar="listOfExtensions",dest="legitExtensions",nargs=1,help="Legit extensions expected, for a normal use of the form, comma separated. Example : 'jpg,png,bmp'")
+exclusiveArgs.add_argument("-n",metavar="n",nargs=1,default=["100"],dest="n",help="Number of common extensions to use. Example : -n 100", type=valid_nArg)
+
+parser.add_argument("-s","--skip-recon",action="store_true",required=False,dest="skipRecon",help="Skip recon phase, where fuxploider tries to determine what extensions are expected and filtered by the server. Needs -l switch.")
+
 args = parser.parse_args()
 
 if args.proxyCreds and args.proxy == None :
 	parser.error("--proxy-creds must be used with --proxy.")
+
+if args.skipRecon and args.legitExtensions == None :
+	parser.error("-s switch needs -l switch. Cannot skip recon phase without any known entry point.")
+
 args.n = int(args.n[0])
 
 if not args.notRegex and not args.trueRegex :
 	parser.error("At least one detection method must be provided, either with --not-regex or with --true-regex.")
+
+if args.legitExtensions :
+	args.legitExtensions = args.legitExtensions[0].split(",")
+
+
 
 print("""\033[1;32m
                                      
@@ -44,9 +59,21 @@ if args.proxyCreds == True :
 	args.proxyCreds["password"] = getpass.getpass("Proxy password : ")
 
 now = datetime.datetime.now()
-mimeFiles = "mimeTypes.advanced"
 
 print("[*] starting at "+str(now.hour)+":"+str(now.minute)+":"+str(now.second))
+
+#mimeFile = "mimeTypes.advanced"
+mimeFile = "mimeTypes.basic"
+if args.legitExtensions :
+	args.legitExtensions = [x.lower() for x in args.legitExtensions]
+	extensions = loadExtensions(args.legitExtensions)
+	foundExt = [a[0] for a in extensions]
+	for b in args.legitExtensions :
+		if b not in foundExt :
+			logging.warning("Extension %s can't be found as a valid/known extension with associated mime type.",b)
+else :
+	extensions = loadExtensions("file",mimeFile)
+nastyExtensions = ["php","asp"]
 
 postData = postDataFromStringToJSON(args.data)
 
@@ -117,8 +144,6 @@ except :
 
 
 
-extensions = loadExtensions(mimeFiles)
-nastyExtensions = ["php","asp"]
 
 
 ###### VALID EXTENSIONS DETECTION FOR THIS FORM ######
