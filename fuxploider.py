@@ -71,6 +71,7 @@ if args.legitExtensions :
 	for b in args.legitExtensions :
 		if b not in foundExt :
 			logging.warning("Extension %s can't be found as a valid/known extension with associated mime type.",b)
+			args.legitExtensions.remove(b)
 else :
 	extensions = loadExtensions("file",mimeFile)
 nastyExtensions = ["php","asp"]
@@ -147,38 +148,42 @@ except :
 
 
 ###### VALID EXTENSIONS DETECTION FOR THIS FORM ######
-logging.info("### Starting detection of valid extensions ...")
-n = 0
-validExtensions = []
-for ext in extensions :
-	validExt = False
-	if n < args.n :
-		#ext = (ext,mime)
-		n += 1
-		logging.debug("Trying extension %s", ext[0])
-		with tempfile.NamedTemporaryFile(suffix="."+ext[0]) as fd :
-			fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,ext[1])},data=postData)
-		if args.notRegex :
-			fileUploaded = re.search(args.notRegex,fu.text)
-			if fileUploaded == None :
-				logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
-				validExtensions.append(ext[0])
-				validExt = True
-				if args.trueRegex :
-					moreInfo = re.search(args.trueRegex,fu.text)
-					if moreInfo :
-						logging.info("\033[1m\033[42mTrue regex matched the following information : %s\033[m",moreInfo.groups())
-		if args.trueRegex :#sinon si args.trueRegex :
-			if not validExt :
-				fileUploaded = re.search(args.trueRegex,fu.text)
-				if fileUploaded :
+if not args.skipRecon :
+	logging.info("### Starting detection of valid extensions ...")
+	n = 0
+	validExtensions = []
+	for ext in extensions :
+		validExt = False
+		if n < args.n :
+			#ext = (ext,mime)
+			n += 1
+			logging.debug("Trying extension %s", ext[0])
+			with tempfile.NamedTemporaryFile(suffix="."+ext[0]) as fd :
+				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,ext[1])},data=postData)
+			if args.notRegex :
+				fileUploaded = re.search(args.notRegex,fu.text)
+				if fileUploaded == None :
 					logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
-					logging.info("\033[1m\033[42mRegex matched the following information : %s\033[m",fileUploaded.groups())
 					validExtensions.append(ext[0])
 					validExt = True
-	else :
-		break
-logging.info("### Tried %s extensions, %s are valid.",n,len(validExtensions))
+					if args.trueRegex :
+						moreInfo = re.search(args.trueRegex,fu.text)
+						if moreInfo :
+							logging.info("\033[1m\033[42mTrue regex matched the following information : %s\033[m",moreInfo.groups())
+			if args.trueRegex :#sinon si args.trueRegex :
+				if not validExt :
+					fileUploaded = re.search(args.trueRegex,fu.text)
+					if fileUploaded :
+						logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
+						logging.info("\033[1m\033[42mRegex matched the following information : %s\033[m",fileUploaded.groups())
+						validExtensions.append(ext[0])
+						validExt = True
+		else :
+			break
+	logging.info("### Tried %s extensions, %s are valid.",n,len(validExtensions))
+else :
+	logging.info("### Skipping detection of valid extensions, using provided extensions instead (%s)",args.legitExtensions)
+	validExtensions = args.legitExtensions
 
 #################################################################
 logging.info("### Starting messing with file extensions and mime types...")
