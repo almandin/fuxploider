@@ -169,7 +169,7 @@ if not args.skipRecon :
 					if args.trueRegex :
 						moreInfo = re.search(args.trueRegex,fu.text)
 						if moreInfo :
-							logging.info("\033[1m\033[42mTrue regex matched the following information : %s\033[m",moreInfo.groups())
+							logging.info("\033[1;32mTrue regex matched the following information : %s\033[m",moreInfo.groups())
 			if args.trueRegex :#sinon si args.trueRegex :
 				if not validExt :
 					fileUploaded = re.search(args.trueRegex,fu.text)
@@ -229,7 +229,7 @@ for legitExt in intersect :
 					if args.trueRegex :
 						moreInfo = re.search(args.trueRegex,fu.text)
 						if moreInfo :
-							logging.info("\033[1m\033[42mTrue regex matched the following information : %s\033[m",moreInfo.groups())
+							logging.info("\033[1;32mTrue regex matched the following information : %s\033[m",moreInfo.groups())
 			if args.trueRegex :
 				if not success :
 					fileUploaded = re.search(args.trueRegex,fu.text)
@@ -238,7 +238,7 @@ for legitExt in intersect :
 						logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mime)
 						moreInfo = re.search(args.trueRegex,fu.text)
 						if moreInfo :
-							logging.info("\033[1m\033[42mTrue regex matched the following information : %s\033[m",moreInfo.groups())
+							logging.info("\033[1;32mTrue regex matched the following information : %s\033[m",moreInfo.groups())
 						success = True
 
 
