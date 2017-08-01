@@ -190,8 +190,24 @@ else :
 	logging.info("### Skipping detection of valid extensions, using provided extensions instead (%s)",args.legitExtensions)
 	validExtensions = args.legitExtensions
 
+if validExtensions == [] :
+	logging.error("No valid extension found.")
+	exit()
 #################################################################
 logging.info("### Starting messing with file extensions and mime types...")
+succeededAttempts = []
+toutesLesExtensions = [x[0] for x in extensions]
+
+nastyExt = "php"
+nastyExtVariants = ["php1","php2","php3","php4","php5","phtml"]
+template = open("template.php","r")
+legitExt = validExtensions[0][0]
+legitMime = validExtensions[0][1]
+#tenter juste en envoyant un faux type mime
+
+
+
+############################################################################################################
 #still looking for a more pythonic way to do this ...
 def techniques(legitExt,badExt,extensions) :
 	filesToTry = []
@@ -207,8 +223,6 @@ def techniques(legitExt,badExt,extensions) :
 
 	return filesToTry
 
-succeededAttempts = []
-toutesLesExtensions = [x[0] for x in extensions]
 
 intersect = list(set(toutesLesExtensions) & set(validExtensions))
 
@@ -252,3 +266,4 @@ for legitExt in intersect :
 
 logging.debug("End of detection phase, the following files have been uploaded meaning a potential file upload vulnerability :")
 print(succeededAttempts)
+template.close()
