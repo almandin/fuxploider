@@ -160,6 +160,7 @@ if not args.skipRecon :
 			n += 1
 			logging.debug("Trying extension %s", ext[0])
 			with tempfile.NamedTemporaryFile(suffix="."+ext[0]) as fd :
+				fd.write(os.urandom(args.size))
 				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,ext[1])},data=postData)
 			if args.notRegex :
 				fileUploaded = re.search(args.notRegex,fu.text)
@@ -218,6 +219,7 @@ for legitExt in intersect :
 			mime = f[1]
 			filename=""
 			with tempfile.NamedTemporaryFile(suffix=fileSuffix) as fd :
+				fd.write(os.urandom(args.size))
 				logging.debug("Trying file '%s' with mimetype '%s'.",os.path.basename(fd.name),mime)
 				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,mime)},data=postData)
 				filename = os.path.basename(fd.name)
