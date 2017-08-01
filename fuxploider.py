@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--data", metavar="postData",dest="data", help="Additionnal data to be transmitted via POST method. Example : -d \"key1=value1&key2=value2\"", type=valid_postData)
 parser.add_argument("--proxy", metavar="proxyUrl", dest="proxy", help="Proxy information. Example : --proxy \"user:password@proxy.host:8080\"", type=valid_proxyString)
 parser.add_argument("--proxy-creds",metavar="credentials",nargs='?',const=True,dest="proxyCreds",help="Prompt for proxy credentials at runtime. Format : 'user:pass'",type=valid_proxyCreds)
-parser.add_argument("-f","--filesize",metavar="integer",nargs=1,default=["100"],dest="size",help="File size to use for files to be created and uploaded.")
+parser.add_argument("-f","--filesize",metavar="integer",nargs=1,default=["10"],dest="size",help="File size to use for files to be created and uploaded (in kB).")
 requiredNamedArgs = parser.add_argument_group('Required named arguments')
 requiredNamedArgs.add_argument("-u","--url", metavar="target", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
 requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex,dest="notRegex")
@@ -32,7 +32,8 @@ if args.skipRecon and args.legitExtensions == None :
 	parser.error("-s switch needs -l switch. Cannot skip recon phase without any known entry point.")
 
 args.n = int(args.n[0])
-args.minSize = int(args.size[0])
+args.size = int(args.size[0])
+args.size = 1024*args.size
 
 if not args.notRegex and not args.trueRegex :
 	parser.error("At least one detection method must be provided, either with --not-regex or with --true-regex.")
@@ -161,6 +162,8 @@ if not args.skipRecon :
 			logging.debug("Trying extension %s", ext[0])
 			with tempfile.NamedTemporaryFile(suffix="."+ext[0]) as fd :
 				fd.write(os.urandom(args.size))
+				fd.flush()
+				fd.seek(0)
 				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,ext[1])},data=postData)
 			if args.notRegex :
 				fileUploaded = re.search(args.notRegex,fu.text)
@@ -220,6 +223,8 @@ for legitExt in intersect :
 			filename=""
 			with tempfile.NamedTemporaryFile(suffix=fileSuffix) as fd :
 				fd.write(os.urandom(args.size))
+				fd.flush()
+				fd.seek(0)
 				logging.debug("Trying file '%s' with mimetype '%s'.",os.path.basename(fd.name),mime)
 				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,mime)},data=postData)
 				filename = os.path.basename(fd.name)
