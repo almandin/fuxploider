@@ -124,15 +124,34 @@ def addProxyCreds(initProxy,creds) :
 	newProxies = {"http":httpproxy,"https":httpsproxy}
 	return newProxies
 
-#Tries to upload a file to the destination url given
-#	Determine if the upload is successful using not/trueRegex
-#Returns true if the upload seems successful, false if it is not.
-def fileUploadTest(uploadUrl,session,postData,fileSuffix,weight,mimetype,notRegex,trueRegex,fileinputField) :
+'''Tries to upload a file to the destination url given
+	Determine if the upload is successful using not/trueRegex
+	Parameters
+		uploadUrl : URL to use when sending multipart/form-data encoded file
+		session : request Session object to use
+		postData : string representing typical post data (key=value&key=value...)
+		fileSuffix : suffix to use when generating file name (typically the extension to use : ".php", ".jpeg%00.php" etc)
+		weight : the size of the file we want to try to upload
+		mimetype : the mime type to use
+		notRegex : negative regex for upload success detection
+		trueRegex : positive regex for upload success detection and pattern matchin (if capturing group present)
+		fileinputField : name of the html file input field to use
+		data : data to be put in the file we want to upload. If set, the weight paramater is not taken in account.
+	Returns
+		dict {
+			"success":True or False
+			"filename": str(filename generated and uploaded)
+			"trueRegex": str(matched string using the positive regex, if any, empty string otherwise)}
+'''
+def fileUploadTest(uploadUrl,session,postData,fileSuffix,weight,mimetype,notRegex,trueRegex,fileinputField,data=None) :
 	success = False
 	matchedWithTrueRegex = ""
 	with tempfile.NamedTemporaryFile(suffix=fileSuffix) as fd :
 		filename = os.path.basename(fd.name)
-		fd.write(os.urandom(weight))
+		if not data :
+			fd.write(os.urandom(weight))
+		else :
+			fd.write(data)
 		fd.flush()
 		fd.seek(0)
 		fu = session.post(uploadUrl,files={fileinputField:(os.path.basename(fd.name),fd,mimetype)},data=postData)
