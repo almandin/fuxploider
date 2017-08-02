@@ -1,4 +1,4 @@
-import re,argparse
+import re,argparse,tempfile,os,requests
 from bs4 import BeautifulSoup
 
 def valid_url(url) :
@@ -123,3 +123,33 @@ def addProxyCreds(initProxy,creds) :
 		httpsproxy = "https://"+creds[0]+":"+creds[1]+"@"+httpsproxy
 	newProxies = {"http":httpproxy,"https":httpsproxy}
 	return newProxies
+
+#Tries to upload a file to the destination url given
+#	Determine if the upload is successful using not/trueRegex
+#Returns true if the upload seems successful, false if it is not.
+def fileUploadTest(uploadUrl,session,postData,fileSuffix,weight,mimetype,notRegex,trueRegex,fileinputField) :
+	success = False
+	matchedWithTrueRegex = ""
+	with tempfile.NamedTemporaryFile(suffix=fileSuffix) as fd :
+		filename = os.path.basename(fd.name)
+		fd.write(os.urandom(weight))
+		fd.flush()
+		fd.seek(0)
+		fu = session.post(uploadUrl,files={fileinputField:(os.path.basename(fd.name),fd,mimetype)},data=postData)
+	if notRegex :
+		fileUploaded = re.search(notRegex,fu.text)
+		if fileUploaded == None :
+			success = True
+			if trueRegex :
+				moreInfo = re.search(trueRegex,fu.text)
+				if moreInfo :
+					matchedWithTrueRegex = str(moreInfo.groups())
+	if trueRegex :
+		if not success :
+			fileUploaded = re.search(trueRegex,fu.text)
+			if fileUploaded :
+				moreInfo = re.search(trueRegex,fu.text)
+				if moreInfo :
+					matchedWithTrueRegex = str(moreInfo.groups())
+				success = True
+	return {"success":success,"filename":filename,"trueRegex":matchedWithTrueRegex}

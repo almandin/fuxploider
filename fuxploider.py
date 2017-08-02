@@ -204,7 +204,7 @@ template = open("template.php","r")
 legitExt = validExtensions[0][0]
 legitMime = validExtensions[0][1]
 #tenter juste en envoyant un faux type mime
-
+#res = fileUploadTest(uploadUrl,postdata,sufix,weight,mimetype,args.notRegex,args.trueRegex,fileinputField)
 
 
 ############################################################################################################
@@ -231,37 +231,22 @@ for legitExt in intersect :
 		#files = [("nom.ext","mime"),("nom.ext","mime")]
 		files = techniques(legitExt,badExt,extensions)
 		for f in files :
-			success = False
-			fileSuffix = f[0]
-			mime = f[1]
-			filename=""
-			with tempfile.NamedTemporaryFile(suffix=fileSuffix) as fd :
-				fd.write(os.urandom(args.size))
-				fd.flush()
-				fd.seek(0)
-				logging.debug("Trying file '%s' with mimetype '%s'.",os.path.basename(fd.name),mime)
-				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,mime)},data=postData)
-				filename = os.path.basename(fd.name)
-			if args.notRegex :
-				fileUploaded = re.search(args.notRegex,fu.text)
-				if fileUploaded == None :
-					logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mime)
-					succeededAttempts.append((filename,mime))
-					success = True
-					if args.trueRegex :
-						moreInfo = re.search(args.trueRegex,fu.text)
-						if moreInfo :
-							logging.info("\033[1;32mTrue regex matched the following information : %s\033[m",moreInfo.groups())
-			if args.trueRegex :
-				if not success :
-					fileUploaded = re.search(args.trueRegex,fu.text)
-					if fileUploaded :
-						succeededAttempts.append((filename,mime))
-						logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mime)
-						moreInfo = re.search(args.trueRegex,fu.text)
-						if moreInfo :
-							logging.info("\033[1;32mTrue regex matched the following information : %s\033[m",moreInfo.groups())
-						success = True
+			suffix = f[0]
+			mimetype = f[1]
+			logging.debug("Trying suffix '%s' with mimetype '%s'.",suffix,mimetype)
+			res = fileUploadTest(uploadURL,s,postData,f[0],args.size,f[1],args.notRegex,args.trueRegex,fileInput["name"])
+			success = res["success"]
+			filename = res["filename"]
+			matchedWithTrueRegex = res["trueRegex"]
+			if success :
+				logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mimetype)
+				succeededAttempts.append((filename,mimetype))
+			else :
+				pass
+			if matchedWithTrueRegex != "" :
+				logging.info("\033[1;32mTrue regex matched the following information : %s\033[m",matchedWithTrueRegex)
+				pass
+
 
 
 logging.debug("End of detection phase, the following files have been uploaded meaning a potential file upload vulnerability :")
