@@ -210,6 +210,12 @@ nastyExtVariants = ["php1","php2","php3","php4","php5","phtml"]
 
 legitExt = validExtensions[0]
 legitMime = getMime(extensions,legitExt)
+
+#trying to upload template as it is
+res = fileUploadTest(uploadURL,s,postData,"."+nastyExt,args.size,nastyMime,args.notRegex,args.trueRegex,fileInput["name"],template.read())
+if res["success"] :
+	logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",res["filename"],nastyMime)
+
 #trying to upload template by changing mime type only
 res = fileUploadTest(uploadURL,s,postData,"."+nastyExt,args.size,legitMime,args.notRegex,args.trueRegex,fileInput["name"],template.read())
 if res["success"] :
