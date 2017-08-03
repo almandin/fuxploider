@@ -1,10 +1,13 @@
 #!/usr/bin/python3
 import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile
 from utils import *
+from UploadForm import UploadForm
 
-version = "0.1.4"
+version = "0.1.6"
+logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
+logger = logging.getLogger("fuxploider")
 
-coloredlogs.install(fmt='%(asctime)s %(levelname)s - %(message)s', level=logging.INFO,datefmt='[%m/%d/%Y-%H:%M:%S]')
+coloredlogs.install(logger=logger,fmt='%(asctime)s %(levelname)s - %(message)s',level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 parser = argparse.ArgumentParser()
@@ -12,6 +15,9 @@ parser.add_argument("-d", "--data", metavar="postData",dest="data", help="Additi
 parser.add_argument("--proxy", metavar="proxyUrl", dest="proxy", help="Proxy information. Example : --proxy \"user:password@proxy.host:8080\"", type=valid_proxyString)
 parser.add_argument("--proxy-creds",metavar="credentials",nargs='?',const=True,dest="proxyCreds",help="Prompt for proxy credentials at runtime. Format : 'user:pass'",type=valid_proxyCreds)
 parser.add_argument("-f","--filesize",metavar="integer",nargs=1,default=["10"],dest="size",help="File size to use for files to be created and uploaded (in kB).")
+parser.add_argument("--cookies",metavar="omnomnom",nargs=1,dest="cookies",help="Cookies to use with HTTP requests. Example : PHPSESSID=aef45aef45afeaef45aef45&JSESSID=AQSEJHQSQSG",type=valid_postData)
+parser.add_argument("--uploads-path",default=[None],metavar="path",nargs=1,dest="uploadsPath",help="Path on the remote server where uploads are put. Example : '/tmp/uploads/'")
+
 requiredNamedArgs = parser.add_argument_group('Required named arguments')
 requiredNamedArgs.add_argument("-u","--url", metavar="target", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
 requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex,dest="notRegex")
@@ -21,9 +27,27 @@ exclusiveArgs = parser.add_mutually_exclusive_group()
 exclusiveArgs.add_argument("-l","--legit-extensions",metavar="listOfExtensions",dest="legitExtensions",nargs=1,help="Legit extensions expected, for a normal use of the form, comma separated. Example : 'jpg,png,bmp'")
 exclusiveArgs.add_argument("-n",metavar="n",nargs=1,default=["100"],dest="n",help="Number of common extensions to use. Example : -n 100", type=valid_nArg)
 
+exclusiveVerbosityArgs = parser.add_mutually_exclusive_group()
+exclusiveVerbosityArgs.add_argument("-v",action="store_true",required=False,dest="verbose",help="Verbose mode")
+exclusiveVerbosityArgs.add_argument("-vv",action="store_true",required=False,dest="veryVerbose",help="Very verbose mode")
+exclusiveVerbosityArgs.add_argument("-vvv",action="store_true",required=False,dest="veryVeryVerbose",help="Very very verbose mode")
+
 parser.add_argument("-s","--skip-recon",action="store_true",required=False,dest="skipRecon",help="Skip recon phase, where fuxploider tries to determine what extensions are expected and filtered by the server. Needs -l switch.")
 
 args = parser.parse_args()
+args.uploadsPath = args.uploadsPath[0]
+
+args.verbosity = 0
+if args.verbose :
+	args.verbosity = 1
+if args.veryVerbose :
+	args.verbosity = 2
+if args.veryVeryVerbose :
+	args.verbosity = 3
+logger.verbosity = args.verbosity
+if args.verbosity > 0 :
+	coloredlogs.install(logger=logger,fmt='%(asctime)s %(levelname)s - %(message)s',level=logging.DEBUG)
+
 
 if args.proxyCreds and args.proxy == None :
 	parser.error("--proxy-creds must be used with --proxy.")
@@ -41,7 +65,8 @@ if not args.notRegex and not args.trueRegex :
 if args.legitExtensions :
 	args.legitExtensions = args.legitExtensions[0].split(",")
 
-
+if args.cookies :
+	args.cookies = postDataFromStringToJSON(args.cookies[0])
 
 print("""\033[1;32m
                                      
@@ -83,6 +108,10 @@ nastyExtensions = ["php","asp"]
 postData = postDataFromStringToJSON(args.data)
 
 s = requests.Session()
+if args.cookies :
+	for key in args.cookies.keys() :
+		s.cookies[key] = args.cookies[key]
+
 ##### PROXY HANDLING #####
 s.trust_env = False
 if args.proxy :
@@ -116,91 +145,29 @@ if args.proxy :
 		proxies = {"http":proxy,"https":proxy}
 
 	s.proxies.update(proxies)
-
-try :
-	initGet = s.get(args.url,headers={"Accept-Encoding":None})
-	if initGet.status_code < 200 or initGet.status_code > 300 :
-		logging.critical("Server responded with following status : %s - %s",initGet.status_code,initGet.reason)
-		exit()
-except Exception as e :
-		logging.critical("%s : Host unreachable (%s)",getHost(args.url),e)
-		exit()
 #########################################################
 
-##### FILE UPLOAD FORM DETECTION #####
-detectedForms = detectForms(initGet.text)
+up = UploadForm(args.notRegex,args.trueRegex,s,args.size,postData,args.uploadsPath)
+up.setup(args.url)
+#########################################################
 
-if len(detectedForms) == 0 :
-	logging.critical("No HTML form found here")
-	exit()
-if len(detectedForms) > 1 :
-	logging.critical("%s forms found containing file upload inputs, no way to choose which one to test.",len(detectedForms))
-	exit()
-if len(detectedForms[0][1]) > 1 :
-	logging.critical("%s file inputs found inside the same form, no way to choose which one to test.",len(detectedForms[0]))
-	exit()
-
-fileInput = detectedForms[0][1][0]
-formDestination = detectedForms[0][0]
-try :
-	action = formDestination["action"]
-	schema = "https" if initGet.url[0:5] == "https" else "http"
-	host = getHost(initGet.url)
-	uploadURL = schema+"://"+host+"/"+action
-except :
-	uploadURL = initGet.url
 ############################################################
-
-
-
+uploadURL = up.uploadUrl
+fileInput = {"name":up.inputName}
 
 ###### VALID EXTENSIONS DETECTION FOR THIS FORM ######
 if not args.skipRecon :
-	logging.info("### Starting detection of valid extensions ...")
-	n = 0
-	validExtensions = []
-	for ext in extensions :
-		validExt = False
-		if n < args.n :
-			#ext = (ext,mime)
-			n += 1
-			logging.debug("Trying extension %s", ext[0])
-			with tempfile.NamedTemporaryFile(suffix="."+ext[0]) as fd :
-				fd.write(os.urandom(args.size))
-				fd.flush()
-				fd.seek(0)
-				fu = s.post(uploadURL,files={fileInput["name"]:(os.path.basename(fd.name),fd,ext[1])},data=postData)
-			if args.notRegex :
-				fileUploaded = re.search(args.notRegex,fu.text)
-				if fileUploaded == None :
-					logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
-					validExtensions.append(ext[0])
-					validExt = True
-					if args.trueRegex :
-						moreInfo = re.search(args.trueRegex,fu.text)
-						if moreInfo :
-							logging.info("\033[1;32mTrue regex matched the following information : %s\033[m",moreInfo.groups())
-			if args.trueRegex :#sinon si args.trueRegex :
-				if not validExt :
-					fileUploaded = re.search(args.trueRegex,fu.text)
-					if fileUploaded :
-						logging.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
-						logging.info("\033[1m\033[42mRegex matched the following information : %s\033[m",fileUploaded.groups())
-						validExtensions.append(ext[0])
-						validExt = True
-		else :
-			break
-	logging.info("### Tried %s extensions, %s are valid.",n,len(validExtensions))
+	n = up.detectValidExtensions(extensions,args.n)
+	logger.info("### Tried %s extensions, %s are valid.",args.n,len(up.validExtensions))
 else :
-	logging.info("### Skipping detection of valid extensions, using provided extensions instead (%s)",args.legitExtensions)
+	logger.info("### Skipping detection of valid extensions, using provided extensions instead (%s)",args.legitExtensions)
 	validExtensions = args.legitExtensions
 
-if validExtensions == [] :
-	logging.error("No valid extension found.")
+if up.validExtensions == [] :
+	logger.error("No valid extension found.")
 	exit()
 #################################################################
-
-logging.info("### Starting shell upload detection (messing with file extensions and mime types...)")
+logger.info("### Starting shell upload detection (messing with file extensions and mime types...)")
 succeededAttempts = []
 
 nastyExt = "php"
@@ -208,63 +175,27 @@ nastyMime = getMime(extensions,nastyExt)
 template = open("template.php","rb")
 nastyExtVariants = ["php1","php2","php3","php4","php5","phtml"]
 
-legitExt = validExtensions[0]
+legitExt = up.validExtensions[0]
 legitMime = getMime(extensions,legitExt)
+up.submitTestCase("."+nastyExt,legitMime,template.read(),"hacked")
 
+exit()
 #trying to upload template as it is
 res = fileUploadTest(uploadURL,s,postData,"."+nastyExt,args.size,nastyMime,args.notRegex,args.trueRegex,fileInput["name"],template.read())
+if args.verbosity > 1 :
+	printSimpleResponseObject(res["responseObject"])
+if args.verbosity > 2 :
+	print(res["responseObject"].text)
 if res["success"] :
-	logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",res["filename"],nastyMime)
+	logger.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",res["filename"],nastyMime)
 
 #trying to upload template by changing mime type only
 res = fileUploadTest(uploadURL,s,postData,"."+nastyExt,args.size,legitMime,args.notRegex,args.trueRegex,fileInput["name"],template.read())
+if args.verbosity > 1 :
+	printSimpleResponseObject(res["responseObject"])
+if args.verbosity > 2 :
+	print(res["responseObject"].text)
 if res["success"] :
-	logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",res["filename"],legitMime)
+	logger.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",res["filename"],legitMime)
 
-exit()
-
-############################################################################################################
-#still looking for a more pythonic way to do this ...
-def techniques(legitExt,badExt,extensions) :
-	filesToTry = []
-	#filesToTry.append(("filename.extension1.extension2","mime/type"))
-	filesToTry.append(("."+legitExt+"."+badExt,getMime(extensions,legitExt)))
-	filesToTry.append(("."+legitExt+"."+badExt,getMime(extensions,badExt)))
-	filesToTry.append(("."+badExt+"."+legitExt,getMime(extensions,legitExt)))
-	filesToTry.append(("."+badExt+"."+legitExt,getMime(extensions,badExt)))
-	filesToTry.append(("."+legitExt+"%00."+badExt,getMime(extensions,legitExt)))
-	filesToTry.append(("."+legitExt+"%00."+badExt,getMime(extensions,badExt)))
-	filesToTry.append(("."+badExt+"%00."+legitExt,getMime(extensions,legitExt)))
-	filesToTry.append(("."+badExt+"%00."+legitExt,getMime(extensions,badExt)))
-
-	return filesToTry
-
-
-intersect = list(set(toutesLesExtensions) & set(validExtensions))
-
-for legitExt in intersect :
-	for badExt in nastyExtensions :
-		#files = [("nom.ext","mime"),("nom.ext","mime")]
-		files = techniques(legitExt,badExt,extensions)
-		for f in files :
-			suffix = f[0]
-			mimetype = f[1]
-			logging.debug("Trying suffix '%s' with mimetype '%s'.",suffix,mimetype)
-			res = fileUploadTest(uploadURL,s,postData,f[0],args.size,f[1],args.notRegex,args.trueRegex,fileInput["name"])
-			success = res["success"]
-			filename = res["filename"]
-			matchedWithTrueRegex = res["trueRegex"]
-			if success :
-				logging.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",filename,mimetype)
-				succeededAttempts.append((filename,mimetype))
-			else :
-				pass
-			if matchedWithTrueRegex != "" :
-				logging.info("\033[1;32mTrue regex matched the following information : %s\033[m",matchedWithTrueRegex)
-				pass
-
-
-
-logging.debug("End of detection phase, the following files have been uploaded meaning a potential file upload vulnerability :")
-print(succeededAttempts)
 template.close()

@@ -8,6 +8,12 @@ def valid_url(url) :
 	else :
 		raise argparse.ArgumentTypeError("The given URL argument does not look like a standard URL.")
 		return False
+def is_url(url) :
+	exp = re.compile("^(https?\:\/\/)((([\da-z\.-]+)\.([a-z\.]{2,6}))|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(:[0-9]+)?([\/\w \.-]*)\/?([\/\w \.-]*)\/?((\?|&).+?(=.+?)?)*$")
+	if exp.match(url) :
+		return True
+	else :
+		return False
 def valid_proxyString(proxyString) :
 	exp = re.compile("^(?:(https?):\/\/)?(?:(.+?):(.+?)@)?([A-Za-z0-9\_\-\~\.]+)(?::([0-9]+))?$")
 	r = exp.match(proxyString)
@@ -21,6 +27,12 @@ def valid_regex(regex) :
 	except re.error :
 		raise argparse.ArgumentTypeError("The given regex argument does not look like a valid regular expression.")
 	return regex
+def is_regex(regex) :
+	try :
+		re.compile(regex)
+		return True
+	except re.error :
+		return False
 def valid_proxyCreds(creds) :
 	exp = re.compile("^([^\n\t :]+):([^\n\t :]+)$")
 	r = exp.match(creds)
@@ -171,4 +183,11 @@ def fileUploadTest(uploadUrl,session,postData,fileSuffix,weight,mimetype,notRege
 				if moreInfo :
 					matchedWithTrueRegex = str(moreInfo.groups())
 				success = True
-	return {"success":success,"filename":filename,"trueRegex":matchedWithTrueRegex}
+	return {"success":success,"filename":filename,"trueRegex":matchedWithTrueRegex,"responseObject":fu}
+
+def printSimpleResponseObject(resObject) :
+	print(resObject.request.method+" - "+resObject.request.url+" : "+str(resObject.status_code))
+	printFormattedHeaders(resObject.headers)
+def printFormattedHeaders(headers) :
+	for key in headers.keys() :
+		print("\t- "+str(key)+" : "+str(headers[key]))
