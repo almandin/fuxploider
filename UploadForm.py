@@ -12,10 +12,13 @@ class UploadForm :
 		self.uploadsFolder = uploadsFolder
 		self.size = size
 		self.validExtensions = []
-	#equivalent de initGet, va cherche le formulaire et détecte l'input file, set les différents éléments
+		#self.httpRequests = 0
+	#searches for a valid html form containing an input file, sets object parameters correctly
 	def setup(self,initUrl) :
+		self.httpRequests = 0
 		try :
 			initGet = self.session.get(initUrl,headers={"Accept-Encoding":None})
+			self.httpRequests += 1
 			if self.logger.verbosity > 1 :
 				printSimpleResponseObject(initGet)
 			if self.logger.verbosity > 2 :
@@ -54,6 +57,7 @@ class UploadForm :
 			self.action = self.uploadUrl
 		self.logger.debug("Using following URL for file upload : %s",self.uploadUrl)
 
+	#tries to upload a file through the file upload form
 	def uploadFile(self,suffix,mime,payload) :
 		with tempfile.NamedTemporaryFile(suffix=suffix) as fd :
 			fd.write(payload)
@@ -62,12 +66,14 @@ class UploadForm :
 			filename = os.path.basename(fd.name)
 			self.logger.debug("Sending file %s with mime type : %s",filename,mime)
 			fu = self.session.post(self.uploadUrl,files={self.inputName:(filename,fd,mime)},data=self.postData)
+			self.httpRequests += 1
 			if self.logger.verbosity > 1 :
 				printSimpleResponseObject(fu)
 			if self.logger.verbosity > 2 :
 				print(fu.text)
 		return (fu,filename)
 
+	#detects if a given html code represents an upload success or not
 	def isASuccessfulUpload(self,html) :
 		result = False
 		validExt = False
@@ -85,6 +91,7 @@ class UploadForm :
 				result = str(fileUploaded.groups())
 		return result
 
+	#detects valid extensions for this upload form (sending legit files with legit mime types)
 	def detectValidExtensions(self,extensions,maxN) :
 		self.logger.info("### Starting detection of valid extensions ...")
 		n = 0
@@ -104,10 +111,13 @@ class UploadForm :
 			else :
 				break
 		return n
+
+	#detects if code execution is gained, given an url to request and a regex supposed to match the executed code output
 	def detectCodeExec(self,url,regex) :
 		if self.logger.verbosity > 0 :
 			self.logger.debug("Requesting %s ...",url)
 		r = self.session.get(url)
+		self.httpRequests += 1
 		if self.logger.verbosity > 1 :
 			printSimpleResponseObject(r)
 		if self.logger.verbosity > 2 :
@@ -118,7 +128,8 @@ class UploadForm :
 		else :
 			return False
 
-	#réponses possibles : ("upload failed", "upload success, impossible de tester l'execution","upload success,execution failed","upload success,execution success")
+	#core function : generates a temporary file using a suffixed name, a mime type and content, uploads the temp file on the server and eventually try to detect
+	#	if code execution is gained through the uploaded file
 	def submitTestCase(self,suffix,mime,payload=None,codeExecRegex=None) :
 		fu = self.uploadFile(suffix,mime,payload)
 		res = self.isASuccessfulUpload(fu[0].text)
@@ -134,9 +145,6 @@ class UploadForm :
 					executedCode = self.detectCodeExec(url,codeExecRegex)
 					if executedCode :
 						retour["codeExec"] = True
-						logging.info("\033[1m\033[42mCODE EXECUTED - entry point found\033[m")
-					else :
-						logging.info("code not executed")
 				elif res and res != True and is_url(res) :
 					url = res
 					print("search "+fu[1]+" inside "+url)
@@ -144,22 +152,7 @@ class UploadForm :
 					print("impossible to determine where to find the uploaded payload")
 		return retour
 
-		'''upload le fichier
-		récupérer la réponse
-		is réponse successful ?
-			si oui
-				si true regex match une url ou si uploads folder est set :
-					executer payload
-						si réponse match la codeExecRegex
-							return upload success et code exec success
-						sinon
-							return upload success et code exec failed
-				sinon
-					return upload success, impossible de tester code exec
-			si non
-				return upload failed
-		'''
-		return
+	#detects html forms and returns a list of beautifulSoup objects (detected forms)
 	def detectForms(html) :
 		erreur = ""
 		soup = BeautifulSoup(html,'html.parser')

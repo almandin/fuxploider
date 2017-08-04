@@ -197,6 +197,7 @@ attempts.append({"suffix":"."+"$legitExt$.$nastyExt$","mime":"$legitMime$"})
 #########################################################################################
 codeExecObtained = False
 nbOfValidExtensions = len(up.validExtensions)
+nbOfEntryPointsFound = 0
 i = 0
 while not codeExecObtained and i < nbOfValidExtensions :
 	legitExt = up.validExtensions[i]
@@ -214,7 +215,8 @@ while not codeExecObtained and i < nbOfValidExtensions :
 		res = up.submitTestCase(suffix,mime,templatefd.read(),codeExecDetectionRegex)
 		templatefd.seek(0)
 		if res["codeExec"] :
-			logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s'))\033[m",suffix,mime,template)
+			logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template)
+			nbOfEntryPointsFound += 1
 			cont = input("Continue attacking ? [y/N] : ")
 			if cont not in ["y","Y","yes","YES","Yes"] :
 				exit()
@@ -223,3 +225,4 @@ while not codeExecObtained and i < nbOfValidExtensions :
 	i += 1
 
 templatefd.close()
+logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
