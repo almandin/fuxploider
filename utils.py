@@ -186,8 +186,8 @@ def fileUploadTest(uploadUrl,session,postData,fileSuffix,weight,mimetype,notRege
 	return {"success":success,"filename":filename,"trueRegex":matchedWithTrueRegex,"responseObject":fu}
 
 def printSimpleResponseObject(resObject) :
-	print(resObject.request.method+" - "+resObject.request.url+" : "+str(resObject.status_code))
+	print("\033[36m"+resObject.request.method+" - "+resObject.request.url+" : "+str(resObject.status_code)+"\033[m")
 	printFormattedHeaders(resObject.headers)
 def printFormattedHeaders(headers) :
 	for key in headers.keys() :
-		print("\t- "+str(key)+" : "+str(headers[key]))
+		print("\033[36m"+"\t- "+str(key)+" : "+str(headers[key])+"\033[m")

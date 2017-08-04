@@ -45,7 +45,7 @@ class UploadForm :
 		self.schema = "https" if initGet.url[0:5] == "https" else "http"
 		try :
 			self.action = formDestination["action"]
-			if self.action == "#" :
+			if self.action in ["#",""] :
 				self.uploadUrl = initGet.request.url
 			else :
 				self.uploadUrl = self.schema+"://"+self.host+"/"+self.action
@@ -112,7 +112,7 @@ class UploadForm :
 			printSimpleResponseObject(r)
 		if self.logger.verbosity > 2 :
 			print(r.text)
-		res = re.search(regex,r.text)
+		res = re.match(regex,r.text)
 		if res :
 			return True
 		else :
@@ -122,23 +122,27 @@ class UploadForm :
 	def submitTestCase(self,suffix,mime,payload=None,codeExecRegex=None) :
 		fu = self.uploadFile(suffix,mime,payload)
 		res = self.isASuccessfulUpload(fu[0].text)
+		retour = {"uploaded":False,"codeExec":False}
 		if res :
+			retour["uploaded"] = True
 			self.logger.info("\033[1;32mUpload of '%s' with mime type %s successful\033[m",fu[1], mime)
 			if res != True :
 				self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",res)
-		if codeExecRegex and valid_regex(codeExecRegex) :
-			if self.uploadsFolder :
-				url = self.schema+"://"+self.host+"/"+self.uploadsFolder+"/"+fu[1]
-				executedCode = self.detectCodeExec(url,codeExecRegex)
-				if executedCode :
-					logging.info("\033[1m\033[42mCODE EXECUTED - entry point found\033[m")
+			if codeExecRegex and valid_regex(codeExecRegex) :
+				if self.uploadsFolder :
+					url = self.schema+"://"+self.host+"/"+self.uploadsFolder+"/"+fu[1]
+					executedCode = self.detectCodeExec(url,codeExecRegex)
+					if executedCode :
+						retour["codeExec"] = True
+						logging.info("\033[1m\033[42mCODE EXECUTED - entry point found\033[m")
+					else :
+						logging.info("code not executed")
+				elif res and res != True and is_url(res) :
+					url = res
+					print("search "+fu[1]+" inside "+url)
 				else :
-					logging.info("code not executed")
-			elif res and res != True and is_url(res) :
-				url = res
-				print("search "+fu[1]+" inside "+url)
-			else :
-				print("impossible to determine where to find the uploaded payload")
+					print("impossible to determine where to find the uploaded payload")
+		return retour
 
 		'''upload le fichier
 		récupérer la réponse
