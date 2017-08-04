@@ -21,7 +21,7 @@ parser.add_argument("--uploads-path",default=[None],metavar="path",nargs=1,dest=
 requiredNamedArgs = parser.add_argument_group('Required named arguments')
 requiredNamedArgs.add_argument("-u","--url", metavar="target", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
 requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex,dest="notRegex")
-requiredNamedArgs.add_argument("--true-regex",metavar="regex", help="Regex matchin an upload success", type=valid_regex, dest="trueRegex")
+requiredNamedArgs.add_argument("--true-regex",metavar="regex", help="Regex matching an upload success", type=valid_regex, dest="trueRegex")
 
 exclusiveArgs = parser.add_mutually_exclusive_group()
 exclusiveArgs.add_argument("-l","--legit-extensions",metavar="listOfExtensions",dest="legitExtensions",nargs=1,help="Legit extensions expected, for a normal use of the form, comma separated. Example : 'jpg,png,bmp'")
@@ -30,7 +30,7 @@ exclusiveArgs.add_argument("-n",metavar="n",nargs=1,default=["100"],dest="n",hel
 exclusiveVerbosityArgs = parser.add_mutually_exclusive_group()
 exclusiveVerbosityArgs.add_argument("-v",action="store_true",required=False,dest="verbose",help="Verbose mode")
 exclusiveVerbosityArgs.add_argument("-vv",action="store_true",required=False,dest="veryVerbose",help="Very verbose mode")
-exclusiveVerbosityArgs.add_argument("-vvv",action="store_true",required=False,dest="veryVeryVerbose",help="Very very verbose mode")
+exclusiveVerbosityArgs.add_argument("-vvv",action="store_true",required=False,dest="veryVeryVerbose",help="Much verbose, very log, wow.")
 
 parser.add_argument("-s","--skip-recon",action="store_true",required=False,dest="skipRecon",help="Skip recon phase, where fuxploider tries to determine what extensions are expected and filtered by the server. Needs -l switch.")
 
@@ -91,19 +91,17 @@ print("[*] starting at "+str(now.hour)+":"+str(now.minute)+":"+str(now.second))
 
 #mimeFile = "mimeTypes.advanced"
 mimeFile = "mimeTypes.basic"
+extensions = loadExtensions("file",mimeFile)
+tmpLegitExt = []
 if args.legitExtensions :
 	args.legitExtensions = [x.lower() for x in args.legitExtensions]
-	extensions = loadExtensions(args.legitExtensions)
 	foundExt = [a[0] for a in extensions]
 	for b in args.legitExtensions :
-		if b not in foundExt :
+		if b in foundExt :
+			tmpLegitExt.append(b)
+		else :
 			logging.warning("Extension %s can't be found as a valid/known extension with associated mime type.",b)
-			args.legitExtensions.remove(b)
-else :
-	extensions = loadExtensions("file",mimeFile)
-toutesLesExtensions = [x[0] for x in extensions]
-
-nastyExtensions = ["php","asp"]
+args.legitExtensions = tmpLegitExt
 
 postData = postDataFromStringToJSON(args.data)
 
@@ -161,16 +159,16 @@ if not args.skipRecon :
 	logger.info("### Tried %s extensions, %s are valid.",args.n,len(up.validExtensions))
 else :
 	logger.info("### Skipping detection of valid extensions, using provided extensions instead (%s)",args.legitExtensions)
-	validExtensions = args.legitExtensions
+	up.validExtensions = args.legitExtensions
 
 if up.validExtensions == [] :
 	logger.error("No valid extension found.")
 	exit()
 
 
-#################### CHOIX DU TEMPLATE ICI, A CHANGER PLUS TARD #######################
+#################### TEMPLATE CHOICI HERE, NEEDS TO CHANGE LATER ######################
 template = "template.php"##############################################################
-codeExecDetectionRegex = "hacked"###########################################################
+codeExecDetectionRegex = "hacked"######################################################
 #######################################################################################
 templatefd = open(template,"rb")
 nastyExt = template.split(".")[-1]
@@ -219,6 +217,7 @@ while not codeExecObtained and i < nbOfValidExtensions :
 			nbOfEntryPointsFound += 1
 			cont = input("Continue attacking ? [y/N] : ")
 			if cont not in ["y","Y","yes","YES","Yes"] :
+				logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
 				exit()
 
 

@@ -132,29 +132,27 @@ class UploadForm :
 	#	if code execution is gained through the uploaded file
 	def submitTestCase(self,suffix,mime,payload=None,codeExecRegex=None) :
 		fu = self.uploadFile(suffix,mime,payload)
-		res = self.isASuccessfulUpload(fu[0].text)
-		retour = {"uploaded":False,"codeExec":False}
-		if res :
-			retour["uploaded"] = True
+		uploadRes = self.isASuccessfulUpload(fu[0].text)
+		result = {"uploaded":False,"codeExec":False}
+		if uploadRes :
+			result["uploaded"] = True
 			self.logger.info("\033[1;32mUpload of '%s' with mime type %s successful\033[m",fu[1], mime)
-			if res != True :
-				self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",res)
-			if codeExecRegex and valid_regex(codeExecRegex) :
+			if uploadRes != True :
+				self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",uploadRes)
+			if codeExecRegex and valid_regex(codeExecRegex) and (self.uploadsFolder or self.trueRegex) :
 				if self.uploadsFolder :
 					url = self.schema+"://"+self.host+"/"+self.uploadsFolder+"/"+fu[1]
 					executedCode = self.detectCodeExec(url,codeExecRegex)
 					if executedCode :
-						retour["codeExec"] = True
-				elif res and res != True and is_url(res) :
-					url = res
-					print("search "+fu[1]+" inside "+url)
+						result["codeExec"] = True
+				#needs to be able to detect code execution through true-regex, maybe asking user for input
+				#ex : true-regex detects "../../uploads/uploadedFile.php" : ask for preffix !
 				else :
-					print("impossible to determine where to find the uploaded payload")
-		return retour
+					self.logger.warning("Impossible to determine where to find the uploaded payload.")
+		return result
 
 	#detects html forms and returns a list of beautifulSoup objects (detected forms)
 	def detectForms(html) :
-		erreur = ""
 		soup = BeautifulSoup(html,'html.parser')
 		detectedForms = soup.find_all("form")
 		returnForms = []
