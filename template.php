@@ -1,3 +1,3 @@
 <?php
-	echo "hacked";
+	echo hash("sha512","almandin");
 ?>

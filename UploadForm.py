@@ -1,10 +1,13 @@
 import logging
 from utils import *
+from urllib.parse import urljoin,urlparse
+
 class UploadForm :
 	def __init__(self,notRegex,trueRegex,session,size,postData,uploadsFolder=None) :
 		self.logger = logging.getLogger("fuxploider")
 		self.postData = postData
 		#self.uploadUrl = uploadUrl
+		#self.formUrl = formUrl
 		self.session = session
 		self.trueRegex = trueRegex
 		self.notRegex = notRegex
@@ -15,14 +18,19 @@ class UploadForm :
 		#self.httpRequests = 0
 	#searches for a valid html form containing an input file, sets object parameters correctly
 	def setup(self,initUrl) :
+		self.formUrl = initUrl
+		url = urlparse(self.formUrl)
+		self.schema = url.scheme
+		self.host = url.netloc
+
 		self.httpRequests = 0
 		try :
-			initGet = self.session.get(initUrl,headers={"Accept-Encoding":None})
+			initGet = self.session.get(self.formUrl,headers={"Accept-Encoding":None})
 			self.httpRequests += 1
 			if self.logger.verbosity > 1 :
 				printSimpleResponseObject(initGet)
 			if self.logger.verbosity > 2 :
-				print(initGet.text)
+				print("\033[36m"+initGet.text+"\033[m")
 			if initGet.status_code < 200 or initGet.status_code > 300 :
 				self.logger.critical("Server responded with following status : %s - %s",initGet.status_code,initGet.reason)
 				exit()
@@ -44,17 +52,10 @@ class UploadForm :
 		self.inputName = detectedForms[0][1][0]["name"]
 		self.logger.debug("Found the following file upload input : %s",self.inputName)
 		formDestination = detectedForms[0][0]
-		self.host = getHost(initGet.url)
-		self.schema = "https" if initGet.url[0:5] == "https" else "http"
-		try :
-			self.action = formDestination["action"]
-			if self.action in ["#",""] :
-				self.uploadUrl = initGet.request.url
-			else :
-				self.uploadUrl = self.schema+"://"+self.host+"/"+self.action
-		except :
-			self.uploadUrl = initGet.url
-			self.action = self.uploadUrl
+
+		self.action = formDestination["action"]
+		self.uploadUrl = urljoin(self.formUrl,formDestination["action"])
+
 		self.logger.debug("Using following URL for file upload : %s",self.uploadUrl)
 
 	#tries to upload a file through the file upload form
@@ -70,7 +71,7 @@ class UploadForm :
 			if self.logger.verbosity > 1 :
 				printSimpleResponseObject(fu)
 			if self.logger.verbosity > 2 :
-				print(fu.text)
+				print("\033[36m"+fu.text+"\033[m")
 		return (fu,filename)
 
 	#detects if a given html code represents an upload success or not
@@ -92,11 +93,17 @@ class UploadForm :
 		return result
 
 	#detects valid extensions for this upload form (sending legit files with legit mime types)
-	def detectValidExtensions(self,extensions,maxN) :
+	def detectValidExtensions(self,extensions,maxN,extList=None) :
 		self.logger.info("### Starting detection of valid extensions ...")
 		n = 0
+		if extList :
+			tmpExtList = []
+			for e in extList :
+				tmpExtList.append((e,getMime(extensions,e)))
+		else :
+			tmpExtList = extensions
 		validExtensions = []
-		for ext in extensions :
+		for ext in tmpExtList :
 			validExt = False
 			if n < maxN :
 				#ext = (ext,mime)
@@ -121,8 +128,8 @@ class UploadForm :
 		if self.logger.verbosity > 1 :
 			printSimpleResponseObject(r)
 		if self.logger.verbosity > 2 :
-			print(r.text)
-		res = re.match(regex,r.text)
+			print("\033[36m"+r.text+"\033[m")
+		res = re.search(regex,r.text)
 		if res :
 			return True
 		else :

