@@ -17,7 +17,6 @@ parser.add_argument("--proxy-creds",metavar="credentials",nargs='?',const=True,d
 parser.add_argument("-f","--filesize",metavar="integer",nargs=1,default=["10"],dest="size",help="File size to use for files to be created and uploaded (in kB).")
 parser.add_argument("--cookies",metavar="omnomnom",nargs=1,dest="cookies",help="Cookies to use with HTTP requests. Example : PHPSESSID=aef45aef45afeaef45aef45&JSESSID=AQSEJHQSQSG",type=valid_postData)
 parser.add_argument("--uploads-path",default=[None],metavar="path",nargs=1,dest="uploadsPath",help="Path on the remote server where uploads are put. Example : '/tmp/uploads/'")
-
 requiredNamedArgs = parser.add_argument_group('Required named arguments')
 requiredNamedArgs.add_argument("-u","--url", metavar="target", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
 requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex,dest="notRegex")
@@ -33,6 +32,7 @@ exclusiveVerbosityArgs.add_argument("-vv",action="store_true",required=False,des
 exclusiveVerbosityArgs.add_argument("-vvv",action="store_true",required=False,dest="veryVeryVerbose",help="Much verbose, very log, wow.")
 
 parser.add_argument("-s","--skip-recon",action="store_true",required=False,dest="skipRecon",help="Skip recon phase, where fuxploider tries to determine what extensions are expected and filtered by the server. Needs -l switch.")
+parser.add_argument("-y",action="store_true",required=False,dest="detectAllEntryPoints",help="Force detection of every entry points without asking to continue each time one is found.")
 
 args = parser.parse_args()
 args.uploadsPath = args.uploadsPath[0]
@@ -168,18 +168,28 @@ if up.validExtensions == [] :
 	logger.error("No valid extension found.")
 	exit()
 
-input()
+entryPoints = []
 
 #################### TEMPLATE CHOICE HERE, NEEDS TO CHANGE LATER ######################
 templates = [
 	{
-	"filename":"template.php",
-	"extension":"php",
-	"codeExecRegex":"74b928cc738434fb9e4d2f387398958c7e5e816a921ad7d8226ebff094f5ad7b5ec865beccf654e7eca540dd6dd3e17aa11df23f9101ab8436b724ab0bef168b",
-	"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]}
+		"filename":"template.php",
+		"extension":"php",
+		"codeExecRegex":"74b928cc738434fb9e4d2f387398958c7e5e816a921ad7d8226ebff094f5ad7b5ec865beccf654e7eca540dd6dd3e17aa11df23f9101ab8436b724ab0bef168b",
+		"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]
+	},{
+		"filename":"template.gif",
+		"extension":"gif",
+		"codeExecRegex":"74b928cc738434fb9e4d2f387398958c7e5e816a921ad7d8226ebff094f5ad7b5ec865beccf654e7eca540dd6dd3e17aa11df23f9101ab8436b724ab0bef168b",
+		"extVariants":[]
+	}
 	]
 #######################################################################################
+logger.info("### Starting shell upload detection (messing with file extensions and mime types...)")
+wantToStop = False
 for template in templates :
+	if wantToStop :
+		break
 	#template[0] : file name
 	#template[1] : extension
 	#template[2] : regex for code exec detection
@@ -189,25 +199,23 @@ for template in templates :
 	nastyMime = getMime(extensions,nastyExt)
 	nastyExtVariants = template["extVariants"]
 	#################################################################
-	logger.info("### Starting shell upload detection (messing with file extensions and mime types...)")
 
 
 
 	attempts = []
-	##Naive attempt
-	attempts.append({"suffix":"."+nastyExt,"mime":nastyMime})
 	#########################################################################################
-	codeExecObtained = False
 	nbOfValidExtensions = len(up.validExtensions)
 	nbOfEntryPointsFound = 0
 	i = 0
-	while not codeExecObtained and i < nbOfValidExtensions :
+	while not wantToStop and i < nbOfValidExtensions :
 		legitExt = up.validExtensions[i]
 		legitMime = getMime(extensions,legitExt)
 		#exec all known techniques
 		##	for each variant of the code execution trigerring extension (php,asp etc)
 		### using either bad or good mime type
 		for nastyVariant in nastyExtVariants+[nastyExt] :
+			##Naive attempt
+			attempts.append({"suffix":"."+nastyExt,"mime":nastyMime})
 			##mime type tampering
 			attempts.append({"suffix":"."+nastyVariant,"mime":legitMime})
 			##double extension bad.good with nasty mime type
@@ -240,13 +248,28 @@ for template in templates :
 			if res["codeExec"] :
 				logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template["filename"])
 				nbOfEntryPointsFound += 1
-				cont = input("Continue attacking ? [y/N] : ")
-				if cont not in ["y","Y","yes","YES","Yes"] :
-					logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
-					exit()
+				foundEntryPoint = a
+				foundEntryPoint["template"] = template["filename"]
+				################
+				################ a enlever/continuer ici, tentative d'utilisation des getimagesize pour bypasser tout le bozin
+				################
+				if foundEntryPoint["template"] == "template.gif" :
+					print(foundEntryPoint)
+					input()
+				################
+				################
+				################
+				entryPoints.append(foundEntryPoint)
+				if not args.detectAllEntryPoints :
+					cont = input("Continue attacking ? [y/N] : ")
+					if cont not in ["y","Y","yes","YES","Yes"] :
+						wantToStop = True
+						break
 
 
 		i += 1
 	templatefd.close()
 
 logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
+print("Found the following entry points : ")
+print(entryPoints)
