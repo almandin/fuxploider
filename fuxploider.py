@@ -273,7 +273,6 @@ for template in templates :
 					if cont not in ["y","Y","yes","YES","Yes"] :
 						wantToStop = True
 						break
-
 		i += 1
 	templatefd.close()
 print()

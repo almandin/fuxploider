@@ -53,8 +53,11 @@ class UploadForm :
 		self.logger.debug("Found the following file upload input : %s",self.inputName)
 		formDestination = detectedForms[0][0]
 
-		self.action = formDestination["action"]
-		self.uploadUrl = urljoin(self.formUrl,formDestination["action"])
+		try :
+			self.action = formDestination["action"]
+		except :
+			self.action = ""
+		self.uploadUrl = urljoin(self.formUrl,self.action)
 
 		self.logger.debug("Using following URL for file upload : %s",self.uploadUrl)
 
@@ -124,6 +127,8 @@ class UploadForm :
 		if self.logger.verbosity > 0 :
 			self.logger.debug("Requesting %s ...",url)
 		r = self.session.get(url)
+		if r.status_code >= 400 :
+			self.logger.warning("Code exec detection returned an http code of %s.",r.status_code)
 		self.httpRequests += 1
 		if self.logger.verbosity > 1 :
 			printSimpleResponseObject(r)
