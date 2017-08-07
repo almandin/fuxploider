@@ -16,6 +16,7 @@ class UploadForm :
 		self.size = size
 		self.validExtensions = []
 		#self.httpRequests = 0
+		self.codeExecUrlPattern = None #pattern for code exec detection using true regex findings
 	#searches for a valid html form containing an input file, sets object parameters correctly
 	def setup(self,initUrl) :
 		self.formUrl = initUrl
@@ -61,6 +62,16 @@ class UploadForm :
 
 		self.logger.debug("Using following URL for file upload : %s",self.uploadUrl)
 
+		if not self.uploadsFolder and not self.trueRegex :
+			self.logger.warning("No uploads folder nor true regex defined, code execution detection will not be possible.")
+		elif not self.uploadsFolder and self.trueRegex :
+			print("No uploads path provided, code detection can still be done using true regex capturing group.")
+			preffixPattern = input("Preffix capturing group of the true regex with : ")
+			suffixPattern = input("Suffix capturing group of the true regex with : ")
+			self.codeExecUrlPattern = preffixPattern+"$captGroup$"+suffixPattern
+		else :
+			pass#uploads folder provided
+
 	#tries to upload a file through the file upload form
 	def uploadFile(self,suffix,mime,payload) :
 		with tempfile.NamedTemporaryFile(suffix=suffix) as fd :
@@ -92,7 +103,10 @@ class UploadForm :
 		if self.trueRegex and not result :
 			fileUploaded = re.search(self.trueRegex,html)
 			if fileUploaded :
-				result = str(fileUploaded.groups())
+				try :
+					result = str(fileUploaded.group(1))
+				except :
+					result = str(fileUploaded.group(0))
 		return result
 
 	#detects valid extensions for this upload form (sending legit files with legit mime types)
@@ -147,6 +161,8 @@ class UploadForm :
 		uploadRes = self.isASuccessfulUpload(fu[0].text)
 		result = {"uploaded":False,"codeExec":False}
 		if uploadRes :
+			print(type(uploadRes))
+			print(uploadRes)
 			result["uploaded"] = True
 			self.logger.info("\033[1;32mUpload of '%s' with mime type %s successful\033[m",fu[1], mime)
 			if uploadRes != True :
@@ -157,8 +173,13 @@ class UploadForm :
 					executedCode = self.detectCodeExec(url,codeExecRegex)
 					if executedCode :
 						result["codeExec"] = True
-				#needs to be able to detect code execution through true-regex, maybe asking user for input
-				#ex : true-regex detects "../../uploads/uploadedFile.php" : ask for preffix !
+				elif self.codeExecUrlPattern :
+					#code exec detection through true regex
+					print("upload url : ")
+
+					finalUrl = self.codeExecUrlPattern.replace("$captGroup$",uploadRes)
+					print(finalUrl)
+					input()
 				else :
 					self.logger.warning("Impossible to determine where to find the uploaded payload.")
 		return result
