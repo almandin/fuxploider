@@ -179,15 +179,16 @@ templates = [
 		"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]
 	},{
 		"filename":"template.gif",
-		"extension":"gif",
+		"extension":"php",
 		"codeExecRegex":"74b928cc738434fb9e4d2f387398958c7e5e816a921ad7d8226ebff094f5ad7b5ec865beccf654e7eca540dd6dd3e17aa11df23f9101ab8436b724ab0bef168b",
-		"extVariants":[]
+		"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]
 	}
 	]
 #######################################################################################
 logger.info("### Starting shell upload detection (messing with file extensions and mime types...)")
 wantToStop = False
 for template in templates :
+	logger.debug("Template in use : %s",template)
 	if wantToStop :
 		break
 	#template[0] : file name
