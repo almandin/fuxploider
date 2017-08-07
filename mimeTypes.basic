@@ -1,0 +1,96 @@
+image/jpeg jpeg jpg jpe
+image/x-ms-bmp bmp
+image/png png
+image/tiff tiff tif
+image/svg+xml svg svgz
+image/gif gif
+image/vnd.microsoft.icon ico
+text/plain asc txt text pot brf srt
+application/pdf pdf
+application/vnd.ms-powerpoint ppt pps
+application/vnd.openxmlformats-officedocument.presentationml.presentation pptx
+application/vnd.oasis.opendocument.text odt
+application/vnd.ms-excel xls xlb xlt
+application/msword doc dot
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet xlsx
+application/vnd.openxmlformats-officedocument.wordprocessingml.document docx
+video/mpeg mpeg mpg mpe
+audio/mpeg mpga mpega mp2 mp3 m4a
+video/x-msvideo avi
+audio/mpegurl m3u
+audio/x-wav wav
+image/x-photoshop psd
+video/x-flv flv
+video/mp4 mp4
+application/x-tar tar
+application/gzip gz
+application/zip zip
+application/rar rar
+application/x-7z-compressed 7z
+application/x-iso9660-image iso
+application/java-archive jar
+text/csv csv
+application/x-rss+xml rss
+text/css css
+application/x-bittorrent torrent
+text/html html htm shtml
+application/font-sfnt otf ttf
+application/x-msdos-program com exe bat dll
+video/quicktime qt mov
+application/x-cbr cbr
+application/x-cdlink vcd
+application/x-trash ~ % bak old sik
+application/octet-stream bin deploy msu msp
+audio/midi mid midi kar
+chemical/x-cerius cer
+application/vnd.stardivision.math sdf
+chemical/x-mdl-sdfile sd sdf
+text/vcard vcf vcard
+text/x-c++src c++ cpp cxx cc
+text/x-chdr h
+application/vnd.google-earth.kmz kmz
+application/x-shockwave-flash swf swfl
+application/vnd.debian.binary-package deb ddeb udeb
+application/x-debian-package deb udeb
+application/javascript js
+application/x-stuffit sit sitx
+application/java-vm class
+application/mac-binhex40 hqx
+application/x-sql sql
+text/html html htm shtml
+audio/x-pn-realaudio ra rm ram
+text/x-perl pl pm
+application/rtf rtf
+text/asp asp
+application/x-httpd-php phtml pht php
+application/x-sh sh
+text/x-sh sh
+audio/x-mpegurl m3u
+text/x-csrc c
+application/x-msdos-program com exe bat dll
+video/3gpp 3gp
+application/vnd.android.package-archive apk
+application/x-msdos-program com exe bat dll
+chemical/x-gamess-input inp gam gamin
+application/postscript ps ai eps epsi epsf eps2 eps3
+text/x-tex tex ltx sty cls
+application/font-sfnt otf ttf
+application/msaccess mdb
+video/x-ms-wmv wmv
+application/vnd.google-earth.kml+xml kml
+audio/x-aiff aif aiff aifc
+chemical/x-pdb pdb ent
+video/x-ms-asf asf asx
+application/pics-rules prf
+text/x-java java
+audio/x-ms-wma wma
+application/x-cab cab
+application/x-apple-diskimage dmg
+application/pgp-keys key
+text/calendar ics icz
+application/xhtml+xml xhtml xht
+application/xml xml xsd
+application/vnd.wordperfect wpd
+application/x-msi msi
+application/x-redhat-package-manager rpm
+text/x-python py
