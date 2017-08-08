@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile
+import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools
 from utils import *
 from UploadForm import UploadForm
 
@@ -211,9 +211,9 @@ entryPoints = []
 logger.info("### Starting code execution detection (messing with file extensions and mime types...)")
 wantToStop = False
 for template in templates :
-	logger.debug("Template in use : %s",template)
 	if wantToStop :
 		break
+	logger.debug("Template in use : %s",template)
 
 	templatefd = open(template["filename"],"rb")
 	nastyExt = template["nastyExt"]
@@ -230,7 +230,13 @@ for template in templates :
 		#exec all known techniques
 		##	for each variant of the code execution trigerring extension (php,asp etc)
 		### using either bad or good mime type
-		for nastyVariant in [nastyExt]+nastyExtVariants :
+		listOfExtensionsTmp = [nastyExt]+nastyExtVariants
+		listOfExtensions = listOfExtensionsTmp
+		#listOfExtensions = []
+		#for e in listOfExtensionsTmp :
+		#	listOfExtensions+=list(''.join(t) for t in itertools.product(*zip(e.lower(),e.upper())))
+
+		for nastyVariant in listOfExtensions :
 			##Naive attempt
 			attempts.append({"suffix":"."+nastyVariant,"mime":nastyMime})
 			##mime type tampering

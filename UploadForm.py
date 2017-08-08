@@ -66,9 +66,13 @@ class UploadForm :
 			self.logger.warning("No uploads folder nor true regex defined, code execution detection will not be possible.")
 		elif not self.uploadsFolder and self.trueRegex :
 			print("No uploads path provided, code detection can still be done using true regex capturing group.")
-			preffixPattern = input("Preffix capturing group of the true regex with : ")
-			suffixPattern = input("Suffix capturing group of the true regex with : ")
-			self.codeExecUrlPattern = preffixPattern+"$captGroup$"+suffixPattern
+			cont = input("Do you want to use the True Regex for code execution detection ? [Y/n] ")
+			if cont in ["","y","Y","yes","Yes","YES"] :
+				preffixPattern = input("Preffix capturing group of the true regex with : ")
+				suffixPattern = input("Suffix capturing group of the true regex with : ")
+				self.codeExecUrlPattern = preffixPattern+"$captGroup$"+suffixPattern
+			else :
+				self.logger.warning("Code execution detection will not be possible as there is no path nor regex pattern configured.")
 		else :
 			pass#uploads folder provided
 
@@ -161,8 +165,6 @@ class UploadForm :
 		uploadRes = self.isASuccessfulUpload(fu[0].text)
 		result = {"uploaded":False,"codeExec":False}
 		if uploadRes :
-			print(type(uploadRes))
-			print(uploadRes)
 			result["uploaded"] = True
 			self.logger.info("\033[1;32mUpload of '%s' with mime type %s successful\033[m",fu[1], mime)
 			if uploadRes != True :
@@ -175,13 +177,13 @@ class UploadForm :
 						result["codeExec"] = True
 				elif self.codeExecUrlPattern :
 					#code exec detection through true regex
-					print("upload url : ")
-
 					finalUrl = self.codeExecUrlPattern.replace("$captGroup$",uploadRes)
-					print(finalUrl)
-					input()
+					executedCode = self.detectCodeExec(finalUrl,codeExecRegex)
+					if executedCode :
+						result["codeExec"] = True
 				else :
-					self.logger.warning("Impossible to determine where to find the uploaded payload.")
+					pass
+					#self.logger.warning("Impossible to determine where to find the uploaded payload.")
 		return result
 
 	#detects html forms and returns a list of beautifulSoup objects (detected forms)
