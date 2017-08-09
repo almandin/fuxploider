@@ -1,6 +1,12 @@
-import re,argparse,tempfile,os,requests
+import re,argparse,tempfile,os,requests,signal,sys
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
+
+def quitting(signal, frame):
+	if input("\nWant to stop ? [y/N] ").lower().startswith("y") :
+		sys.exit(0)
+	else :
+		pass
 
 def valid_url(url) :
 	parsedUrl = urlparse(url)
@@ -137,3 +143,6 @@ def printSimpleResponseObject(resObject) :
 def printFormattedHeaders(headers) :
 	for key in headers.keys() :
 		print("\033[36m"+"\t- "+str(key)+" : "+str(headers[key])+"\033[m")
+
+def getPoisoningBytes() :
+	return ["%00",":",";"]

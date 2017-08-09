@@ -67,7 +67,7 @@ class UploadForm :
 		elif not self.uploadsFolder and self.trueRegex :
 			print("No uploads path provided, code detection can still be done using true regex capturing group.")
 			cont = input("Do you want to use the True Regex for code execution detection ? [Y/n] ")
-			if cont in ["","y","Y","yes","Yes","YES"] :
+			if cont.lower().startswith("y") :
 				preffixPattern = input("Preffix capturing group of the true regex with : ")
 				suffixPattern = input("Suffix capturing group of the true regex with : ")
 				self.codeExecUrlPattern = preffixPattern+"$captGroup$"+suffixPattern
@@ -170,20 +170,29 @@ class UploadForm :
 			if uploadRes != True :
 				self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",uploadRes)
 			if codeExecRegex and valid_regex(codeExecRegex) and (self.uploadsFolder or self.trueRegex) :
+				url = None
+				secondUrl = None
 				if self.uploadsFolder :
 					url = self.schema+"://"+self.host+"/"+self.uploadsFolder+"/"+fu[1]
-					executedCode = self.detectCodeExec(url,codeExecRegex)
-					if executedCode :
-						result["codeExec"] = True
+					filename = fu[1]
+					secondUrl = None
+					for b in getPoisoningBytes() :
+						if b in filename :
+							secondUrl = b.join(url.split(b)[:-1])
 				elif self.codeExecUrlPattern :
 					#code exec detection through true regex
-					finalUrl = self.codeExecUrlPattern.replace("$captGroup$",uploadRes)
-					executedCode = self.detectCodeExec(finalUrl,codeExecRegex)
-					if executedCode :
-						result["codeExec"] = True
+					url = self.codeExecUrlPattern.replace("$captGroup$",uploadRes)
 				else :
 					pass
 					#self.logger.warning("Impossible to determine where to find the uploaded payload.")
+				if url :
+					executedCode = self.detectCodeExec(url,codeExecRegex)
+					if executedCode :
+						result["codeExec"] = True
+				if secondUrl :
+					executedCode = self.detectCodeExec(secondUrl,codeExecRegex)
+					if executedCode :
+						result["codeExec"] = True
 		return result
 
 	#detects html forms and returns a list of beautifulSoup objects (detected forms)
