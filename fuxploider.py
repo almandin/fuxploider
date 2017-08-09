@@ -3,7 +3,7 @@ import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,ite
 from utils import *
 from UploadForm import UploadForm
 
-version = "0.2.0"
+version = "0.2.2"
 logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
 logger = logging.getLogger("fuxploider")
 
