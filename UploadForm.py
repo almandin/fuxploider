@@ -67,7 +67,7 @@ class UploadForm :
 		elif not self.uploadsFolder and self.trueRegex :
 			print("No uploads path provided, code detection can still be done using true regex capturing group.")
 			cont = input("Do you want to use the True Regex for code execution detection ? [Y/n] ")
-			if cont.lower().startswith("y") :
+			if cont.lower().startswith("y") or cont == "" :
 				preffixPattern = input("Preffix capturing group of the true regex with : ")
 				suffixPattern = input("Suffix capturing group of the true regex with : ")
 				self.codeExecUrlPattern = preffixPattern+"$captGroup$"+suffixPattern
