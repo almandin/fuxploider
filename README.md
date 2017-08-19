@@ -10,7 +10,7 @@ Screenshots
 Installation
 ----
 
-    git clone https://github.com/almandin/fuxploider.git
+    git clone https://github.com/almandin/fuxploider.git
     cd fuxploider
     pip3 install -r requirements.txt
 
