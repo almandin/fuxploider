@@ -1,6 +1,5 @@
 [
 	{
-		"comment" : "basic php file",
 		"templateName" : "phpinfo",
 		"description" : "Basic php file (plain text) with simple call to phpinfo().",
 		"filename":"template.php",
@@ -8,7 +7,6 @@
 		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>",
 		"extVariants":["php1","php2","php3","php4","php5","phtml","pht","Php","PhP","pHp","pHp1","pHP2","pHtMl","PHp5"]
 	},{
-		"comment" : "malicious gif with php code in the comments section to bypass getimagesize() like functions",
 		"templateName" : "nastygif",
 		"description" : "Valid GIF file with basic call to phpinfo() in the comments section of the file",
 		"filename":"template.gif",
