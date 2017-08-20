@@ -195,6 +195,8 @@ if up.validExtensions == [] :
 	exit()
 
 entryPoints = []
+with open("techniques.json","r") as rawTechniques :
+	techniques = json.loads(rawTechniques.read())
 
 ##############################################################################################################################################
 ##############################################################################################################################################
@@ -224,23 +226,10 @@ for template in templates :
 		listOfExtensions = listOfExtensionsTmp
 
 		for nastyVariant in listOfExtensions :
-			##Naive attempt
-			attempts.append({"suffix":"."+nastyVariant,"mime":nastyMime})
-			##mime type tampering
-			attempts.append({"suffix":"."+nastyVariant,"mime":legitMime})
-			##double extension bad.good with nasty mime type
-			attempts.append({"suffix":"."+nastyVariant+"."+legitExt,"mime":nastyMime})
-			##double extension bad.good with gentle mime type
-			attempts.append({"suffix":"."+nastyVariant+"."+legitExt,"mime":legitMime})
-			##double extension good.bad with nasty mime type
-			attempts.append({"suffix":"."+legitExt+"."+nastyVariant,"mime":nastyMime})
-			##double extension good.bad with good mime type
-			attempts.append({"suffix":"."+legitExt+"."+nastyVariant,"mime":legitMime})
-			for b in getPoisoningBytes() :
-				attempts.append({"suffix":"."+nastyVariant+b+"."+legitExt,"mime":legitMime})
-				attempts.append({"suffix":"."+nastyVariant+b+"."+legitExt,"mime":nastyMime})
-				attempts.append({"suffix":"."+legitExt+b+"."+nastyVariant,"mime":legitMime})
-				attempts.append({"suffix":"."+legitExt+b+"."+nastyVariant,"mime":nastyMime})
+			for t in techniques :
+				mime = legitMime if t["mime"] == "legit" else nastyMime
+				suffix = t["suffix"].replace("$legitExt$",legitExt).replace("$nastyExt$",nastyVariant)
+				attempts.append({"suffix":suffix,"mime":mime})
 
 		for a in attempts :
 			suffix = a["suffix"]
