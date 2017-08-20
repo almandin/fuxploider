@@ -145,4 +145,5 @@ def printFormattedHeaders(headers) :
 		print("\033[36m"+"\t- "+str(key)+" : "+str(headers[key])+"\033[m")
 
 def getPoisoningBytes() :
-	return ["%00",":",";"]
+	return ["%00"]
+	#return ["%00",":",";"]

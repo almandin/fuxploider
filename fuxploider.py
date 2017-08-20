@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools
+import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools,json
 from utils import *
 from UploadForm import UploadForm
 signal.signal(signal.SIGINT, quitting)
@@ -12,23 +12,8 @@ logging.getLogger("requests").setLevel(logging.ERROR)
 
 #################### TEMPLATES DEFINITION HERE ######################
 templatesFolder = "payloads"
-templates = [
-	{#basic php file
-		"templateName" : "phpinfo",
-		"description" : "Basic php file (plain text) with simple call to phpinfo().",
-		"filename":"template.php",
-		"nastyExt":"php",
-		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>",
-		"extVariants":["php1","php2","php3","php4","php5","phtml","pht","Php","PhP","pHp","pHp1","pHP2","pHtMl","PHp5"]
-	},{#malicious gif with php code in the comments section to bypass getimagesize() like functions
-		"templateName" : "nastygif",
-		"description" : "Valid GIF file with basic call to phpinfo() in the comments section of the file",
-		"filename":"template.gif",
-		"nastyExt":"php",
-		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>",
-		"extVariants":["php1","php2","php3","php4","php5","phtml","pht","Php","PhP","pHp","pHp1","pHP2","pHtMl","PHp5"]
-	}
-]
+with open("templates.json","r") as fd :
+	templates = json.loads(fd.read())
 #######################################################################
 templatesNames = [x["templateName"] for x in templates]
 templatesSection = "[TEMPLATES]\nTemplates are malicious payloads meant to be uploaded on the scanned remote server. Code execution detection is done based on the expected output of the payload."
@@ -237,9 +222,6 @@ for template in templates :
 		### using either bad or good mime type
 		listOfExtensionsTmp = [nastyExt]+nastyExtVariants
 		listOfExtensions = listOfExtensionsTmp
-		#listOfExtensions = []
-		#for e in listOfExtensionsTmp :
-		#	listOfExtensions+=list(''.join(t) for t in itertools.product(*zip(e.lower(),e.upper())))
 
 		for nastyVariant in listOfExtensions :
 			##Naive attempt
