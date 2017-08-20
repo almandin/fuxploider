@@ -11,6 +11,7 @@ coloredlogs.install(logger=logger,fmt='%(asctime)s %(levelname)s - %(message)s',
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 #################### TEMPLATES DEFINITION HERE ######################
+templatesFolder = "payloads"
 templates = [
 	{#basic php file
 		"templateName" : "phpinfo",
@@ -219,7 +220,7 @@ for template in templates :
 		break
 	logger.debug("Template in use : %s",template)
 
-	templatefd = open(template["filename"],"rb")
+	templatefd = open(templatesFolder+"/"+template["filename"],"rb")
 	nastyExt = template["nastyExt"]
 	nastyMime = getMime(extensions,nastyExt)
 	nastyExtVariants = template["extVariants"]
