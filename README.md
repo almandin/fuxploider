@@ -6,6 +6,7 @@ fuxploider is an open source penetration testing tool that automates the process
 
 Screenshots
 ----
+![screenshot](screenshot.png)
 
 Installation
 ----
