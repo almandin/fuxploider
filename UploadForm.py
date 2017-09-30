@@ -1,4 +1,4 @@
-import logging
+import logging,concurrent.futures
 from utils import *
 from urllib.parse import urljoin,urlparse
 
@@ -113,6 +113,15 @@ class UploadForm :
 					result = str(fileUploaded.group(0))
 		return result
 
+	def detectValidExtension(self, ext, html) :
+		r = self.isASuccessfulUpload(html)
+		if r :
+			self.validExtensions.append(ext)
+			self.logger.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext)
+			if r != True :
+				self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",r)
+		return r
+
 	#detects valid extensions for this upload form (sending legit files with legit mime types)
 	def detectValidExtensions(self,extensions,maxN,extList=None) :
 		self.logger.info("### Starting detection of valid extensions ...")
@@ -124,20 +133,19 @@ class UploadForm :
 		else :
 			tmpExtList = extensions
 		validExtensions = []
-		for ext in tmpExtList :
-			validExt = False
-			if n < maxN :
-				#ext = (ext,mime)
-				n += 1
-				fu = self.uploadFile("."+ext[0],ext[1],os.urandom(self.size))
-				res = self.isASuccessfulUpload(fu[0].text)
-				if res :
-					self.validExtensions.append(ext[0])
-					self.logger.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
-					if res != True :
-						self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",res)
-			else :
-				break
+
+		try :
+			for ext in tmpExtList :
+				validExt = False
+				if n < maxN :
+					#ext = (ext,mime)
+					n += 1
+					fu = self.uploadFile("."+ext[0],ext[1],os.urandom(self.size))
+					res = self.detectValidExtension(ext[0],fu[0].text)
+				else :
+					break
+		except KeyboardInterrupt :
+			pass
 		return n
 
 	#detects if code execution is gained, given an url to request and a regex supposed to match the executed code output
