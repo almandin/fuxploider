@@ -1,6 +1,7 @@
 import logging,concurrent.futures
 from utils import *
 from urllib.parse import urljoin,urlparse
+from threading import Lock
 
 class UploadForm :
 	def __init__(self,notRegex,trueRegex,session,size,postData,uploadsFolder=None) :
@@ -17,6 +18,9 @@ class UploadForm :
 		self.validExtensions = []
 		#self.httpRequests = 0
 		self.codeExecUrlPattern = None #pattern for code exec detection using true regex findings
+		self.logLock = Lock()
+		self.stopThreads = False
+
 	#searches for a valid html form containing an input file, sets object parameters correctly
 	def setup(self,initUrl) :
 		self.formUrl = initUrl
@@ -113,14 +117,23 @@ class UploadForm :
 					result = str(fileUploaded.group(0))
 		return result
 
-	def detectValidExtension(self, ext, html) :
-		r = self.isASuccessfulUpload(html)
-		if r :
-			self.validExtensions.append(ext)
-			self.logger.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext)
-			if r != True :
-				self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",r)
-		return r
+	#callback function for matching html text against regex in order to detect successful uploads
+	def detectValidExtension(self, future) :
+		if not self.stopThreads :
+			html = future.result()[0].text
+			ext = future.ext[0]
+
+			r = self.isASuccessfulUpload(html)
+			if r :
+				self.validExtensions.append(ext)
+				self.logLock.acquire()
+				self.logger.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext)
+				if r != True :
+					self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",r)
+				self.logLock.release()
+			return r
+		else :
+			return None
 
 	#detects valid extensions for this upload form (sending legit files with legit mime types)
 	def detectValidExtensions(self,extensions,maxN,extList=None) :
@@ -134,18 +147,23 @@ class UploadForm :
 			tmpExtList = extensions
 		validExtensions = []
 
-		try :
-			for ext in tmpExtList :
-				validExt = False
-				if n < maxN :
-					#ext = (ext,mime)
+		extensionsToTest = tmpExtList[0:maxN]
+		with concurrent.futures.ThreadPoolExecutor(max_workers=self.threads) as executor :
+			futures = []
+			try :
+				for ext in extensionsToTest:
+					f = executor.submit(self.uploadFile,"."+ext[0],ext[1],os.urandom(self.size))
+					f.ext = ext
+					f.add_done_callback(self.detectValidExtension)
+					futures.append(f)
+				for future in concurrent.futures.as_completed(futures) :
+					a = future.result()
 					n += 1
-					fu = self.uploadFile("."+ext[0],ext[1],os.urandom(self.size))
-					res = self.detectValidExtension(ext[0],fu[0].text)
-				else :
-					break
-		except KeyboardInterrupt :
-			pass
+			except KeyboardInterrupt :
+				self.stopThreads = True
+				executor._threads.clear()
+				concurrent.futures.thread._threads_queues.clear()
+				executor.shutdown(wait=False)
 		return n
 
 	#detects if code execution is gained, given an url to request and a regex supposed to match the executed code output
