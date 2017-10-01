@@ -46,7 +46,7 @@ exclusiveVerbosityArgs.add_argument("-vv",action="store_true",required=False,des
 exclusiveVerbosityArgs.add_argument("-vvv",action="store_true",required=False,dest="veryVeryVerbose",help="Much verbose, very log, wow.")
 
 parser.add_argument("-s","--skip-recon",action="store_true",required=False,dest="skipRecon",help="Skip recon phase, where fuxploider tries to determine what extensions are expected and filtered by the server. Needs -l switch.")
-parser.add_argument("-y",action="store_true",required=False,dest="detectAllEntryPoints",help="Force detection of every entry points without asking to continue each time one is found.")
+parser.add_argument("-y",action="store_true",required=False,dest="detectAllEntryPoints",help="Force detection of every entry points. Will not stop at first code exec found.")
 parser.add_argument("-T","--threads",metavar="Threads",nargs=1,dest="nbThreads",help="Number of parallel tasks (threads).",type=int,default=[4])
 
 args = parser.parse_args()
@@ -207,7 +207,12 @@ print("Extensions detection : "+str(b-a))
 
 ##############################################################################################################################################
 ##############################################################################################################################################
-input("Start uploading payloads ?")
+cont = input("Start uploading payloads ? [Y/n] : ")
+if cont.lower().startswith("y") or cont == "" :
+	pass
+else :
+	exit("Exiting.")
+
 entryPoints = []
 
 with open("techniques.json","r") as rawTechniques :
@@ -262,7 +267,8 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 					foundEntryPoint = a
 					entryPoints.append(foundEntryPoint)
 					lock.release()
-					raise KeyboardInterrupt
+					if not args.detectAllEntryPoints :
+						raise KeyboardInterrupt
 
 	except KeyboardInterrupt :
 		stopThreads = True
