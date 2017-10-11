@@ -126,11 +126,9 @@ class UploadForm :
 			r = self.isASuccessfulUpload(html)
 			if r :
 				self.validExtensions.append(ext)
-				self.logLock.acquire()
 				self.logger.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext)
 				if r != True :
 					self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",r)
-				self.logLock.release()
 			return r
 		else :
 			return None

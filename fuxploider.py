@@ -214,6 +214,7 @@ else :
 	exit("Exiting.")
 
 entryPoints = []
+up.stopThreads = True
 
 with open("techniques.json","r") as rawTechniques :
 	techniques = json.loads(rawTechniques.read())
@@ -241,7 +242,7 @@ for template in templates :
 
 
 stopThreads = False
-lock = Lock()
+
 attemptsTested = 0
 
 with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as executor :
@@ -261,12 +262,12 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 			attemptsTested += 1
 			if not stopThreads :
 				if res["codeExec"] :
-					lock.acquire()
+
 					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template["filename"])
 					nbOfEntryPointsFound += 1
 					foundEntryPoint = a
 					entryPoints.append(foundEntryPoint)
-					lock.release()
+
 					if not args.detectAllEntryPoints :
 						raise KeyboardInterrupt
 
@@ -275,17 +276,15 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 		executor._threads.clear()
 		concurrent.futures.thread._threads_queues.clear()
 		executor.shutdown(wait=False)
-
-
+		logger.setLevel(logging.CRITICAL)
+		logger.verbosity = -1
 
 
 ################################################################################################################################################
 ################################################################################################################################################
-lock.acquire()
 d = datetime.datetime.now()
 print("Code exec detection : "+str(d-c))
 print()
 logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
 print("Found the following entry points : ")
 print(entryPoints)
-lock.release()
