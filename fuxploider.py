@@ -4,14 +4,12 @@ from utils import *
 from UploadForm import UploadForm
 from threading import Lock
 #signal.signal(signal.SIGINT, quitting)
-version = "0.3.1"
+version = "0.4.0"
 logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
 logger = logging.getLogger("fuxploider")
 
 coloredlogs.install(logger=logger,fmt='%(asctime)s %(levelname)s - %(message)s',level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.ERROR)
-
-test = "ok"
 
 #################### TEMPLATES DEFINITION HERE ######################
 templatesFolder = "payloads"
