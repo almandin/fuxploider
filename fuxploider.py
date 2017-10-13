@@ -11,6 +11,8 @@ logger = logging.getLogger("fuxploider")
 coloredlogs.install(logger=logger,fmt='%(asctime)s %(levelname)s - %(message)s',level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.ERROR)
 
+test = "ok"
+
 #################### TEMPLATES DEFINITION HERE ######################
 templatesFolder = "payloads"
 with open("templates.json","r") as fd :
@@ -208,6 +210,7 @@ print("Extensions detection : "+str(b-a))
 ##############################################################################################################################################
 ##############################################################################################################################################
 cont = input("Start uploading payloads ? [Y/n] : ")
+up.shouldLog = True
 if cont.lower().startswith("y") or cont == "" :
 	pass
 else :
