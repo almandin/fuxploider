@@ -276,9 +276,9 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 
 	except KeyboardInterrupt :
 		stopThreads = True
+		executor.shutdown(wait=False)
 		executor._threads.clear()
 		concurrent.futures.thread._threads_queues.clear()
-		executor.shutdown(wait=False)
 		logger.setLevel(logging.CRITICAL)
 		logger.verbosity = -1
 
@@ -286,7 +286,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 ################################################################################################################################################
 ################################################################################################################################################
 d = datetime.datetime.now()
-print("Code exec detection : "+str(d-c))
+#print("Code exec detection : "+str(d-c))
 print()
 logging.info("%s entry point(s) found using %s HTTP requests.",nbOfEntryPointsFound,up.httpRequests)
 print("Found the following entry points : ")

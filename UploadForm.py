@@ -166,10 +166,10 @@ class UploadForm :
 					n += 1
 			except KeyboardInterrupt :
 				self.shouldLog = False
+				executor.shutdown(wait=False)
 				self.stopThreads = True
 				executor._threads.clear()
 				concurrent.futures.thread._threads_queues.clear()
-				executor.shutdown(wait=False)
 		return n
 
 	#detects if code execution is gained, given an url to request and a regex supposed to match the executed code output
@@ -207,7 +207,7 @@ class UploadForm :
 			
 			if uploadRes != True :
 				if self.shouldLog :
-					self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",uploadRes)
+					self.logger.info("\033[1;32m\tTrue regex matched the following information : %s\033[m",uploadRes)
 
 			if codeExecRegex and valid_regex(codeExecRegex) and (self.uploadsFolder or self.trueRegex) :
 				url = None
