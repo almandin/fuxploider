@@ -1,6 +1,7 @@
-import logging
+import logging,concurrent.futures
 from utils import *
 from urllib.parse import urljoin,urlparse
+from threading import Lock
 
 class UploadForm :
 	def __init__(self,notRegex,trueRegex,session,size,postData,uploadsFolder=None) :
@@ -17,6 +18,10 @@ class UploadForm :
 		self.validExtensions = []
 		#self.httpRequests = 0
 		self.codeExecUrlPattern = None #pattern for code exec detection using true regex findings
+		self.logLock = Lock()
+		self.stopThreads = False
+		self.shouldLog = True
+
 	#searches for a valid html form containing an input file, sets object parameters correctly
 	def setup(self,initUrl) :
 		self.formUrl = initUrl
@@ -83,13 +88,17 @@ class UploadForm :
 			fd.flush()
 			fd.seek(0)
 			filename = os.path.basename(fd.name)
-			self.logger.debug("Sending file %s with mime type : %s",filename,mime)
+			if self.shouldLog :
+				self.logger.debug("Sending file %s with mime type : %s",filename,mime)
+			
 			fu = self.session.post(self.uploadUrl,files={self.inputName:(filename,fd,mime)},data=self.postData)
 			self.httpRequests += 1
-			if self.logger.verbosity > 1 :
-				printSimpleResponseObject(fu)
-			if self.logger.verbosity > 2 :
-				print("\033[36m"+fu.text+"\033[m")
+			if self.shouldLog :
+				if self.logger.verbosity > 1 :
+					printSimpleResponseObject(fu)
+				if self.logger.verbosity > 2 :
+					print("\033[36m"+fu.text+"\033[m")
+			
 		return (fu,filename)
 
 	#detects if a given html code represents an upload success or not
@@ -113,6 +122,24 @@ class UploadForm :
 					result = str(fileUploaded.group(0))
 		return result
 
+	#callback function for matching html text against regex in order to detect successful uploads
+	def detectValidExtension(self, future) :
+		if not self.stopThreads :
+			html = future.result()[0].text
+			ext = future.ext[0]
+
+			r = self.isASuccessfulUpload(html)
+			if r :
+				self.validExtensions.append(ext)
+				if self.shouldLog :
+					self.logger.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext)
+					if r != True :
+						self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",r)
+
+			return r
+		else :
+			return None
+
 	#detects valid extensions for this upload form (sending legit files with legit mime types)
 	def detectValidExtensions(self,extensions,maxN,extList=None) :
 		self.logger.info("### Starting detection of valid extensions ...")
@@ -124,34 +151,43 @@ class UploadForm :
 		else :
 			tmpExtList = extensions
 		validExtensions = []
-		for ext in tmpExtList :
-			validExt = False
-			if n < maxN :
-				#ext = (ext,mime)
-				n += 1
-				fu = self.uploadFile("."+ext[0],ext[1],os.urandom(self.size))
-				res = self.isASuccessfulUpload(fu[0].text)
-				if res :
-					self.validExtensions.append(ext[0])
-					self.logger.info("\033[1m\033[42mExtension %s seems valid for this form.\033[m", ext[0])
-					if res != True :
-						self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",res)
-			else :
-				break
+
+		extensionsToTest = tmpExtList[0:maxN]
+		with concurrent.futures.ThreadPoolExecutor(max_workers=self.threads) as executor :
+			futures = []
+			try :
+				for ext in extensionsToTest:
+					f = executor.submit(self.uploadFile,"."+ext[0],ext[1],os.urandom(self.size))
+					f.ext = ext
+					f.add_done_callback(self.detectValidExtension)
+					futures.append(f)
+				for future in concurrent.futures.as_completed(futures) :
+					a = future.result()
+					n += 1
+			except KeyboardInterrupt :
+				self.shouldLog = False
+				executor.shutdown(wait=False)
+				self.stopThreads = True
+				executor._threads.clear()
+				concurrent.futures.thread._threads_queues.clear()
 		return n
 
 	#detects if code execution is gained, given an url to request and a regex supposed to match the executed code output
 	def detectCodeExec(self,url,regex) :
-		if self.logger.verbosity > 0 :
-			self.logger.debug("Requesting %s ...",url)
+		if self.shouldLog :
+			if self.logger.verbosity > 0 :
+				self.logger.debug("Requesting %s ...",url)
+		
 		r = self.session.get(url)
-		if r.status_code >= 400 :
-			self.logger.warning("Code exec detection returned an http code of %s.",r.status_code)
-		self.httpRequests += 1
-		if self.logger.verbosity > 1 :
-			printSimpleResponseObject(r)
-		if self.logger.verbosity > 2 :
-			print("\033[36m"+r.text+"\033[m")
+		if self.shouldLog :
+			if r.status_code >= 400 :
+				self.logger.warning("Code exec detection returned an http code of %s.",r.status_code)
+			self.httpRequests += 1
+			if self.logger.verbosity > 1 :
+				printSimpleResponseObject(r)
+			if self.logger.verbosity > 2 :
+				print("\033[36m"+r.text+"\033[m")
+
 		res = re.search(regex,r.text)
 		if res :
 			return True
@@ -166,9 +202,13 @@ class UploadForm :
 		result = {"uploaded":False,"codeExec":False}
 		if uploadRes :
 			result["uploaded"] = True
-			self.logger.info("\033[1;32mUpload of '%s' with mime type %s successful\033[m",fu[1], mime)
+			if self.shouldLog :
+				self.logger.info("\033[1;32mUpload of '%s' with mime type %s successful\033[m",fu[1], mime)
+			
 			if uploadRes != True :
-				self.logger.info("\033[1;32mTrue regex matched the following information : %s\033[m",uploadRes)
+				if self.shouldLog :
+					self.logger.info("\033[1;32m\tTrue regex matched the following information : %s\033[m",uploadRes)
+
 			if codeExecRegex and valid_regex(codeExecRegex) and (self.uploadsFolder or self.trueRegex) :
 				url = None
 				secondUrl = None
