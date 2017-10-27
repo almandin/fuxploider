@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools,json,concurrent.futures
+import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools,json,concurrent.futures,random
 from utils import *
 from UploadForm import UploadForm
 from threading import Lock
@@ -49,9 +49,28 @@ parser.add_argument("-s","--skip-recon",action="store_true",required=False,dest=
 parser.add_argument("-y",action="store_true",required=False,dest="detectAllEntryPoints",help="Force detection of every entry points. Will not stop at first code exec found.")
 parser.add_argument("-T","--threads",metavar="Threads",nargs=1,dest="nbThreads",help="Number of parallel tasks (threads).",type=int,default=[4])
 
+exclusiveUserAgentsArgs = parser.add_mutually_exclusive_group()
+exclusiveUserAgentsArgs.add_argument("-U","--user-agent",metavar="useragent",nargs=1,dest="userAgent",help="User-agent to use while requesting the target.",type=str,default=[requests.utils.default_user_agent()])
+exclusiveUserAgentsArgs.add_argument("--random-user-agent",action="store_true",required=False,dest="randomUserAgent",help="Use a random user-agent while requesting the target.")
+
 args = parser.parse_args()
 args.uploadsPath = args.uploadsPath[0]
 args.nbThreads = args.nbThreads[0]
+args.userAgent = args.userAgent[0]
+
+if args.randomUserAgent :
+	with open("user-agents.txt","r") as fd :
+		nb = 0
+		for l in fd :
+			nb += 1
+		fd.seek(0)
+		nb = random.randint(0,nb)
+		for i in range(0,nb) :
+			args.userAgent = fd.readline()[:-1]
+
+print(args.userAgent)
+exit()
+
 
 if args.template :
 	args.template = args.template[0]
@@ -138,7 +157,7 @@ s = requests.Session()
 if args.cookies :
 	for key in args.cookies.keys() :
 		s.cookies[key] = args.cookies[key]
-
+s.headers = {'User-Agent':args.userAgent}
 ##### PROXY HANDLING #####
 s.trust_env = False
 if args.proxy :
