@@ -13,5 +13,12 @@
 		"nastyExt":"php",
 		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>",
 		"extVariants":["php1","php2","php3","php4","php5","phtml","pht","Php","PhP","pHp","pHp1","pHP2","pHtMl","PHp5"]
+	},{
+		"templateName" : "nastyjpg",
+		"description" : "Valid JPG file with basic call to phpinfo() in the comments section of the file",
+		"filename":"template.jpg",
+		"nastyExt":"php",
+		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>",
+		"extVariants":["php1","php2","php3","php4","php5","phtml","pht","Php","PhP","pHp","pHp1","pHP2","pHtMl","PHp5"]
 	}
 ]

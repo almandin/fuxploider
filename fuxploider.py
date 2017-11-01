@@ -240,7 +240,7 @@ nbOfEntryPointsFound = 0
 attempts = []
 templatesData = {}
 
-for template in templates :
+'''for template in templates :
 	templatefd = open(templatesFolder+"/"+template["filename"],"rb")
 	templatesData[template["templateName"]] = templatefd.read()
 	templatefd.close()
@@ -253,8 +253,22 @@ for template in templates :
 			for t in techniques :
 				mime = legitMime if t["mime"] == "legit" else nastyMime
 				suffix = t["suffix"].replace("$legitExt$",legitExt).replace("$nastyExt$",nastyVariant)
-				attempts.append({"suffix":suffix,"mime":mime,"templateName":template["templateName"]})
+				attempts.append({"suffix":suffix,"mime":mime,"templateName":template["templateName"]})'''
 
+for template in templates :
+	templatefd = open(templatesFolder+"/"+template["filename"],"rb")
+	templatesData[template["templateName"]] = templatefd.read()
+	templatefd.close()
+	nastyExt = template["nastyExt"]
+	nastyMime = getMime(extensions,nastyExt)
+	nastyExtVariants = template["extVariants"]
+	for t in techniques :
+		for nastyVariant in [nastyExt]+nastyExtVariants :
+			for legitExt in up.validExtensions :
+				legitMime = getMime(extensions,legitExt)
+				mime = legitMime if t["mime"] == "legit" else nastyMime
+				suffix = t["suffix"].replace("$legitExt$",legitExt).replace("$nastyExt$",nastyVariant)
+				attempts.append({"suffix":suffix,"mime":mime,"templateName":template["templateName"]})
 
 
 stopThreads = False
@@ -271,6 +285,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 			codeExecRegex = [t["codeExecRegex"] for t in templates if t["templateName"] == a["templateName"]][0]
 
 			f = executor.submit(up.submitTestCase,suffix,mime,payload,codeExecRegex)
+			f.a = a
 			futures.append(f)
 
 		for future in concurrent.futures.as_completed(futures) :
@@ -279,9 +294,9 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 			if not stopThreads :
 				if res["codeExec"] :
 
-					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template["filename"])
+					foundEntryPoint = future.a
+					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",foundEntryPoint["suffix"],foundEntryPoint["mime"],foundEntryPoint["templateName"])
 					nbOfEntryPointsFound += 1
-					foundEntryPoint = a
 					entryPoints.append(foundEntryPoint)
 
 					if not args.detectAllEntryPoints :
