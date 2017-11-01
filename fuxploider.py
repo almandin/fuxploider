@@ -68,10 +68,6 @@ if args.randomUserAgent :
 		for i in range(0,nb) :
 			args.userAgent = fd.readline()[:-1]
 
-print(args.userAgent)
-exit()
-
-
 if args.template :
 	args.template = args.template[0]
 	if args.template not in templatesNames :
