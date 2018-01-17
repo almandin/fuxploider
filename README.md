@@ -20,11 +20,11 @@ Usage
 
 To get a list of basic options and switches use :
 
-    python fuxploider.py -h
+    python3 fuxploider.py -h
 
 Basic example :
 
-    python fuxploider.py --url https://awesomeFileUploadService.com --not-regex "wrong file type"
+    python3 fuxploider.py --url https://awesomeFileUploadService.com --not-regex "wrong file type"
 
 
 > [!] legal disclaimer : Usage of fuxploider for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
