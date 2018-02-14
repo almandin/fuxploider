@@ -79,7 +79,7 @@ def detectForms(html) :
 	returnForms = []
 	if len(detectedForms) > 0 :
 		for f in detectedForms :
-			fileInputs = f.findChildren("input",{"type":"file"})
+			fileInputs = f.findChildren("input",{"type":re.compile("file",re.I)})
 			if len(fileInputs) > 0 :
 				returnForms.append((f,fileInputs))
 
