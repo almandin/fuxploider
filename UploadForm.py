@@ -90,7 +90,6 @@ class UploadForm :
 			filename = os.path.basename(fd.name)
 			if self.shouldLog :
 				self.logger.debug("Sending file %s with mime type : %s",filename,mime)
-			
 			fu = self.session.post(self.uploadUrl,files={self.inputName:(filename,fd,mime)},data=self.postData)
 			self.httpRequests += 1
 			if self.shouldLog :

