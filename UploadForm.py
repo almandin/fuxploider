@@ -4,19 +4,22 @@ from urllib.parse import urljoin,urlparse
 from threading import Lock
 
 class UploadForm :
-	def __init__(self,notRegex,trueRegex,session,size,postData,uploadsFolder=None) :
+	def __init__(self,notRegex,trueRegex,session,size,postData,uploadsFolder=None,formUrl=None,formAction=None,inputName=None) :
 		self.logger = logging.getLogger("fuxploider")
 		self.postData = postData
-		#self.uploadUrl = uploadUrl
-		#self.formUrl = formUrl
+		self.formUrl = formUrl
+		url = urlparse(self.formUrl)
+		self.schema = url.scheme
+		self.host = url.netloc
+		self.uploadUrl = urljoin(formUrl, formAction)
 		self.session = session
 		self.trueRegex = trueRegex
 		self.notRegex = notRegex
-		#self.inputName = inputName
+		self.inputName = inputName
 		self.uploadsFolder = uploadsFolder
 		self.size = size
 		self.validExtensions = []
-		#self.httpRequests = 0
+		self.httpRequests = 0
 		self.codeExecUrlPattern = None #pattern for code exec detection using true regex findings
 		self.logLock = Lock()
 		self.stopThreads = False
@@ -228,10 +231,12 @@ class UploadForm :
 					executedCode = self.detectCodeExec(url,codeExecRegex)
 					if executedCode :
 						result["codeExec"] = True
+						result["url"] = url
 				if secondUrl :
 					executedCode = self.detectCodeExec(secondUrl,codeExecRegex)
 					if executedCode :
 						result["codeExec"] = True
+						result["url"] = secondUrl
 		return result
 
 	#detects html forms and returns a list of beautifulSoup objects (detected forms)

@@ -53,6 +53,11 @@ exclusiveUserAgentsArgs = parser.add_mutually_exclusive_group()
 exclusiveUserAgentsArgs.add_argument("-U","--user-agent",metavar="useragent",nargs=1,dest="userAgent",help="User-agent to use while requesting the target.",type=str,default=[requests.utils.default_user_agent()])
 exclusiveUserAgentsArgs.add_argument("--random-user-agent",action="store_true",required=False,dest="randomUserAgent",help="Use a random user-agent while requesting the target.")
 
+manualFormArgs = parser.add_argument_group('Manual Form Detection arguments')
+manualFormArgs.add_argument("-m","--manual-form-detection",action="store_true",dest="manualFormDetection",help="Disable automatic form detection. Useful when automatic detection fails due to: (1) Form loaded using Javascript (2) Multiple file upload forms in URL.")
+manualFormArgs.add_argument("--input-name",metavar="image",dest="inputName",help="Name of input for file. Example: <input type=\"file\" name=\"image\">")
+manualFormArgs.add_argument("--form-action",default="",metavar="upload.php",dest="formAction",help="Path of form action. Example: <form method=\"POST\" action=\"upload.php\">")
+
 args = parser.parse_args()
 args.uploadsPath = args.uploadsPath[0]
 args.nbThreads = args.nbThreads[0]
@@ -111,6 +116,9 @@ if args.legitExtensions :
 
 if args.cookies :
 	args.cookies = postDataFromStringToJSON(args.cookies[0])
+
+if args.manualFormDetection and args.inputName is None:
+	parser.error("--manual-form-detection requires --input-name")
 
 print("""\033[1;32m
                                      
@@ -189,8 +197,13 @@ if args.proxy :
 	s.proxies.update(proxies)
 #########################################################
 
-up = UploadForm(args.notRegex,args.trueRegex,s,args.size,postData,args.uploadsPath)
-up.setup(args.url)
+if args.manualFormDetection:
+	if args.formAction == "":
+		logger.warning("Using Manual Form Detection and no action specified with --form-action. Defaulting to empty string - meaning form action will be set to --url parameter.")
+	up = UploadForm(args.notRegex,args.trueRegex,s,args.size,postData,args.uploadsPath,args.url,args.formAction,args.inputName)
+else:
+	up = UploadForm(args.notRegex,args.trueRegex,s,args.size,postData,args.uploadsPath)
+	up.setup(args.url)
 up.threads = args.nbThreads
 #########################################################
 
@@ -280,7 +293,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 				if res["codeExec"] :
 
 					foundEntryPoint = future.a
-					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",foundEntryPoint["suffix"],foundEntryPoint["mime"],foundEntryPoint["templateName"])
+					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s','%s')\033[m",foundEntryPoint["suffix"],foundEntryPoint["mime"],foundEntryPoint["templateName"],res["url"])
 					nbOfEntryPointsFound += 1
 					entryPoints.append(foundEntryPoint)
 
