@@ -1,10 +1,10 @@
 #!/usr/bin/python3
-import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools,json,concurrent.futures
+import re,requests,argparse,logging,os,coloredlogs,datetime,getpass,tempfile,itertools,json,concurrent.futures,random
 from utils import *
 from UploadForm import UploadForm
 from threading import Lock
 #signal.signal(signal.SIGINT, quitting)
-version = "0.4.0"
+version = "0.5.0"
 logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
 logger = logging.getLogger("fuxploider")
 
@@ -49,9 +49,29 @@ parser.add_argument("-s","--skip-recon",action="store_true",required=False,dest=
 parser.add_argument("-y",action="store_true",required=False,dest="detectAllEntryPoints",help="Force detection of every entry points. Will not stop at first code exec found.")
 parser.add_argument("-T","--threads",metavar="Threads",nargs=1,dest="nbThreads",help="Number of parallel tasks (threads).",type=int,default=[4])
 
+exclusiveUserAgentsArgs = parser.add_mutually_exclusive_group()
+exclusiveUserAgentsArgs.add_argument("-U","--user-agent",metavar="useragent",nargs=1,dest="userAgent",help="User-agent to use while requesting the target.",type=str,default=[requests.utils.default_user_agent()])
+exclusiveUserAgentsArgs.add_argument("--random-user-agent",action="store_true",required=False,dest="randomUserAgent",help="Use a random user-agent while requesting the target.")
+
+manualFormArgs = parser.add_argument_group('Manual Form Detection arguments')
+manualFormArgs.add_argument("-m","--manual-form-detection",action="store_true",dest="manualFormDetection",help="Disable automatic form detection. Useful when automatic detection fails due to: (1) Form loaded using Javascript (2) Multiple file upload forms in URL.")
+manualFormArgs.add_argument("--input-name",metavar="image",dest="inputName",help="Name of input for file. Example: <input type=\"file\" name=\"image\">")
+manualFormArgs.add_argument("--form-action",default="",metavar="upload.php",dest="formAction",help="Path of form action. Example: <form method=\"POST\" action=\"upload.php\">")
+
 args = parser.parse_args()
 args.uploadsPath = args.uploadsPath[0]
 args.nbThreads = args.nbThreads[0]
+args.userAgent = args.userAgent[0]
+
+if args.randomUserAgent :
+	with open("user-agents.txt","r") as fd :
+		nb = 0
+		for l in fd :
+			nb += 1
+		fd.seek(0)
+		nb = random.randint(0,nb)
+		for i in range(0,nb) :
+			args.userAgent = fd.readline()[:-1]
 
 if args.template :
 	args.template = args.template[0]
@@ -97,6 +117,9 @@ if args.legitExtensions :
 if args.cookies :
 	args.cookies = postDataFromStringToJSON(args.cookies[0])
 
+if args.manualFormDetection and args.inputName is None:
+	parser.error("--manual-form-detection requires --input-name")
+
 print("""\033[1;32m
                                      
  ___             _     _   _         
@@ -138,7 +161,7 @@ s = requests.Session()
 if args.cookies :
 	for key in args.cookies.keys() :
 		s.cookies[key] = args.cookies[key]
-
+s.headers = {'User-Agent':args.userAgent}
 ##### PROXY HANDLING #####
 s.trust_env = False
 if args.proxy :
@@ -174,8 +197,13 @@ if args.proxy :
 	s.proxies.update(proxies)
 #########################################################
 
-up = UploadForm(args.notRegex,args.trueRegex,s,args.size,postData,args.uploadsPath)
-up.setup(args.url)
+if args.manualFormDetection:
+	if args.formAction == "":
+		logger.warning("Using Manual Form Detection and no action specified with --form-action. Defaulting to empty string - meaning form action will be set to --url parameter.")
+	up = UploadForm(args.notRegex,args.trueRegex,s,args.size,postData,args.uploadsPath,args.url,args.formAction,args.inputName)
+else:
+	up = UploadForm(args.notRegex,args.trueRegex,s,args.size,postData,args.uploadsPath)
+	up.setup(args.url)
 up.threads = args.nbThreads
 #########################################################
 
@@ -225,7 +253,7 @@ nbOfEntryPointsFound = 0
 attempts = []
 templatesData = {}
 
-for template in templates :
+'''for template in templates :
 	templatefd = open(templatesFolder+"/"+template["filename"],"rb")
 	templatesData[template["templateName"]] = templatefd.read()
 	templatefd.close()
@@ -238,8 +266,22 @@ for template in templates :
 			for t in techniques :
 				mime = legitMime if t["mime"] == "legit" else nastyMime
 				suffix = t["suffix"].replace("$legitExt$",legitExt).replace("$nastyExt$",nastyVariant)
-				attempts.append({"suffix":suffix,"mime":mime,"templateName":template["templateName"]})
+				attempts.append({"suffix":suffix,"mime":mime,"templateName":template["templateName"]})'''
 
+for template in templates :
+	templatefd = open(templatesFolder+"/"+template["filename"],"rb")
+	templatesData[template["templateName"]] = templatefd.read()
+	templatefd.close()
+	nastyExt = template["nastyExt"]
+	nastyMime = getMime(extensions,nastyExt)
+	nastyExtVariants = template["extVariants"]
+	for t in techniques :
+		for nastyVariant in [nastyExt]+nastyExtVariants :
+			for legitExt in up.validExtensions :
+				legitMime = getMime(extensions,legitExt)
+				mime = legitMime if t["mime"] == "legit" else nastyMime
+				suffix = t["suffix"].replace("$legitExt$",legitExt).replace("$nastyExt$",nastyVariant)
+				attempts.append({"suffix":suffix,"mime":mime,"templateName":template["templateName"]})
 
 
 stopThreads = False
@@ -256,6 +298,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 			codeExecRegex = [t["codeExecRegex"] for t in templates if t["templateName"] == a["templateName"]][0]
 
 			f = executor.submit(up.submitTestCase,suffix,mime,payload,codeExecRegex)
+			f.a = a
 			futures.append(f)
 
 		for future in concurrent.futures.as_completed(futures) :
@@ -264,9 +307,9 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 			if not stopThreads :
 				if res["codeExec"] :
 
-					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",suffix,mime,template["filename"])
+					foundEntryPoint = future.a
+					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",foundEntryPoint["suffix"],foundEntryPoint["mime"],foundEntryPoint["templateName"])
 					nbOfEntryPointsFound += 1
-					foundEntryPoint = a
 					entryPoints.append(foundEntryPoint)
 
 					if not args.detectAllEntryPoints :

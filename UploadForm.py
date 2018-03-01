@@ -4,19 +4,22 @@ from urllib.parse import urljoin,urlparse
 from threading import Lock
 
 class UploadForm :
-	def __init__(self,notRegex,trueRegex,session,size,postData,uploadsFolder=None) :
+	def __init__(self,notRegex,trueRegex,session,size,postData,uploadsFolder=None,formUrl=None,formAction=None,inputName=None) :
 		self.logger = logging.getLogger("fuxploider")
 		self.postData = postData
-		#self.uploadUrl = uploadUrl
-		#self.formUrl = formUrl
+		self.formUrl = formUrl
+		url = urlparse(self.formUrl)
+		self.schema = url.scheme
+		self.host = url.netloc
+		self.uploadUrl = urljoin(formUrl, formAction)
 		self.session = session
 		self.trueRegex = trueRegex
 		self.notRegex = notRegex
-		#self.inputName = inputName
+		self.inputName = inputName
 		self.uploadsFolder = uploadsFolder
 		self.size = size
 		self.validExtensions = []
-		#self.httpRequests = 0
+		self.httpRequests = 0
 		self.codeExecUrlPattern = None #pattern for code exec detection using true regex findings
 		self.logLock = Lock()
 		self.stopThreads = False
@@ -90,7 +93,6 @@ class UploadForm :
 			filename = os.path.basename(fd.name)
 			if self.shouldLog :
 				self.logger.debug("Sending file %s with mime type : %s",filename,mime)
-			
 			fu = self.session.post(self.uploadUrl,files={self.inputName:(filename,fd,mime)},data=self.postData)
 			self.httpRequests += 1
 			if self.shouldLog :
