@@ -22,11 +22,11 @@
 		"extVariants":["php1","php2","php3","php4","php5","phtml","pht","Php","PhP","pHp","pHp1","pHP2","pHtMl","PHp5"]
 	},
 	{
-		"templateName" : "jsptest",
+		"templateName" : "basicjsp",
 		"description" : "Basic jsp file with simple mathematical expression.",
 		"filename":"template.jsp",
 		"nastyExt":"jsp",
 		"codeExecRegex":"12",
-		"extVariants":[]
+		"extVariants":["JSP","jSp"]
 	}
 ]
