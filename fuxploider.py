@@ -253,21 +253,6 @@ nbOfEntryPointsFound = 0
 attempts = []
 templatesData = {}
 
-'''for template in templates :
-	templatefd = open(templatesFolder+"/"+template["filename"],"rb")
-	templatesData[template["templateName"]] = templatefd.read()
-	templatefd.close()
-	nastyExt = template["nastyExt"]
-	nastyMime = getMime(extensions,nastyExt)
-	nastyExtVariants = template["extVariants"]
-	for legitExt in up.validExtensions :
-		legitMime = getMime(extensions,legitExt)
-		for nastyVariant in [nastyExt]+nastyExtVariants :
-			for t in techniques :
-				mime = legitMime if t["mime"] == "legit" else nastyMime
-				suffix = t["suffix"].replace("$legitExt$",legitExt).replace("$nastyExt$",nastyVariant)
-				attempts.append({"suffix":suffix,"mime":mime,"templateName":template["templateName"]})'''
-
 for template in templates :
 	templatefd = open(templatesFolder+"/"+template["filename"],"rb")
 	templatesData[template["templateName"]] = templatefd.read()
