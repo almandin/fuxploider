@@ -231,10 +231,12 @@ class UploadForm :
 					executedCode = self.detectCodeExec(url,codeExecRegex)
 					if executedCode :
 						result["codeExec"] = True
+						result["url"] = url
 				if secondUrl :
 					executedCode = self.detectCodeExec(secondUrl,codeExecRegex)
 					if executedCode :
 						result["codeExec"] = True
+						result["url"] = secondUrl
 		return result
 
 	#detects html forms and returns a list of beautifulSoup objects (detected forms)

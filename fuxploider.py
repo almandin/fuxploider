@@ -293,7 +293,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 				if res["codeExec"] :
 
 					foundEntryPoint = future.a
-					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s')\033[m",foundEntryPoint["suffix"],foundEntryPoint["mime"],foundEntryPoint["templateName"])
+					logging.info("\033[1m\033[42mCode execution obtained ('%s','%s','%s','%s')\033[m",foundEntryPoint["suffix"],foundEntryPoint["mime"],foundEntryPoint["templateName"],res["url"])
 					nbOfEntryPointsFound += 1
 					entryPoints.append(foundEntryPoint)
 
