@@ -85,12 +85,15 @@ class UploadForm :
 			pass#uploads folder provided
 
 	#tries to upload a file through the file upload form
-	def uploadFile(self,suffix,mime,payload) :
+	def uploadFile(self,suffix,mime,payload,dynamicPayload=False) :
 		with tempfile.NamedTemporaryFile(suffix=suffix) as fd :
+			filename = os.path.basename(fd.name)
+			filename_wo_ext = filename.split('.', 1)[0]
+			if dynamicPayload:
+				payload = payload.replace(b"$filename$",bytearray(filename_wo_ext,'ascii'))
 			fd.write(payload)
 			fd.flush()
 			fd.seek(0)
-			filename = os.path.basename(fd.name)
 			if self.shouldLog :
 				self.logger.debug("Sending file %s with mime type : %s",filename,mime)
 			fu = self.session.post(self.uploadUrl,files={self.inputName:(filename,fd,mime)},data=self.postData)
@@ -101,7 +104,7 @@ class UploadForm :
 				if self.logger.verbosity > 2 :
 					print("\033[36m"+fu.text+"\033[m")
 			
-		return (fu,filename)
+		return (fu,filename,filename_wo_ext)
 
 	#detects if a given html code represents an upload success or not
 	def isASuccessfulUpload(self,html) :
@@ -198,8 +201,8 @@ class UploadForm :
 
 	#core function : generates a temporary file using a suffixed name, a mime type and content, uploads the temp file on the server and eventually try to detect
 	#	if code execution is gained through the uploaded file
-	def submitTestCase(self,suffix,mime,payload=None,codeExecRegex=None) :
-		fu = self.uploadFile(suffix,mime,payload)
+	def submitTestCase(self,suffix,mime,payload=None,codeExecRegex=None,codeExecURL=None,dynamicPayload=False) :
+		fu = self.uploadFile(suffix,mime,payload,dynamicPayload)
 		uploadRes = self.isASuccessfulUpload(fu[0].text)
 		result = {"uploaded":False,"codeExec":False}
 		if uploadRes :
@@ -215,7 +218,11 @@ class UploadForm :
 				url = None
 				secondUrl = None
 				if self.uploadsFolder :
-					url = self.schema+"://"+self.host+"/"+self.uploadsFolder+"/"+fu[1]
+					if codeExecURL:
+						filename_wo_ext = fu[2]
+						url = codeExecURL.replace("$uploadFormDir$",os.path.dirname(self.uploadUrl)).replace("$filename$",filename_wo_ext)
+					else:
+						url = self.schema+"://"+self.host+"/"+self.uploadsFolder+"/"+fu[1]
 					filename = fu[1]
 					secondUrl = None
 					for b in getPoisoningBytes() :
