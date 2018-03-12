@@ -28,5 +28,13 @@
 		"nastyExt":"jsp",
 		"codeExecRegex":"12",
 		"extVariants":["JSP","jSp"]
+	},
+	{
+		"templateName" : "imagetragick",
+		"description" : "Attempts to exploit RCE in ImageMagick (CVE-2016–3714)",
+		"filename":"imagemagick_rce.mvg",
+		"codeExecRegex":"ImageTragick Detected!",
+		"codeExecURL":"$uploadFormDir$/$filename$.txt",
+		"dynamicPayload":"True"
 	}
 ]
