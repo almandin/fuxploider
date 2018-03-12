@@ -26,5 +26,6 @@ Basic example :
 
     python3 fuxploider.py --url https://awesomeFileUploadService.com --not-regex "wrong file type"
 
+Special thanks to : **madhatter37**
 
 > [!] legal disclaimer : Usage of fuxploider for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
