@@ -85,9 +85,12 @@ class UploadForm :
 			pass#uploads folder provided
 
 	#tries to upload a file through the file upload form
-	def uploadFile(self,suffix,mime,payload,dynamicPayload=False) :
+	def uploadFile(self,suffix,mime,payload,dynamicPayload=False,payloadFilename=None,staticFilename=False) :
 		with tempfile.NamedTemporaryFile(suffix=suffix) as fd :
-			filename = os.path.basename(fd.name)
+			if staticFilename:
+				filename = payloadFilename
+			else:
+				filename = os.path.basename(fd.name)
 			filename_wo_ext = filename.split('.', 1)[0]
 			if dynamicPayload:
 				payload = payload.replace(b"$filename$",bytearray(filename_wo_ext,'ascii'))
@@ -201,8 +204,8 @@ class UploadForm :
 
 	#core function : generates a temporary file using a suffixed name, a mime type and content, uploads the temp file on the server and eventually try to detect
 	#	if code execution is gained through the uploaded file
-	def submitTestCase(self,suffix,mime,payload=None,codeExecRegex=None,codeExecURL=None,dynamicPayload=False) :
-		fu = self.uploadFile(suffix,mime,payload,dynamicPayload)
+	def submitTestCase(self,suffix,mime,payload=None,codeExecRegex=None,codeExecURL=None,dynamicPayload=False,payloadFilename=None,staticFilename=False) :
+		fu = self.uploadFile(suffix,mime,payload,dynamicPayload,payloadFilename,staticFilename)
 		uploadRes = self.isASuccessfulUpload(fu[0].text)
 		result = {"uploaded":False,"codeExec":False}
 		if uploadRes :

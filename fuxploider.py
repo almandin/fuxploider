@@ -262,11 +262,13 @@ for template in templates :
 	nastyExtVariants = template.get("extVariants")
 	codeExecURL = template.get("codeExecURL")
 	dynamicPayload = template.get("dynamicPayload")
+	staticFilename = template.get("staticFilename")
 	for legitExt in up.validExtensions:
 		legitMime = getMime(extensions, legitExt)
 		if nastyExt == None:
 			attempts.append({"suffix": "."+legitExt, "mime": legitMime, "templateName": template["templateName"],
-							 "codeExecURL": codeExecURL, "dynamicPayload": dynamicPayload})
+							 "codeExecURL": codeExecURL, "dynamicPayload": dynamicPayload,
+							 "payloadFilename":template["filename"], "staticFilename": staticFilename})
 		else:
 			for t in techniques :
 				for nastyVariant in [nastyExt]+nastyExtVariants :
@@ -274,7 +276,8 @@ for template in templates :
 					mime = legitMime if t["mime"] == "legit" else nastyMime
 					suffix = t["suffix"].replace("$legitExt$",legitExt).replace("$nastyExt$",nastyVariant)
 					attempts.append({"suffix":suffix,"mime":mime,"templateName":template["templateName"],
-									 "codeExecURL":codeExecURL,"dynamicPayload":dynamicPayload})
+									 "codeExecURL":codeExecURL,"dynamicPayload":dynamicPayload,
+									 "payloadFilename":template["filename"], "staticFilename":staticFilename})
 
 
 stopThreads = False
@@ -285,14 +288,20 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=args.nbThreads) as execut
 	futures = []
 	try :
 		for a in attempts :
+			payloadFilename = a["payloadFilename"]
+			#if template uses a static filename, set the suffix to that of the filename
+			if a["staticFilename"]:
+				a["suffix"] = payloadFilename.split('.', 1)[1]
 			suffix = a["suffix"]
 			mime = a["mime"]
 			payload = templatesData[a["templateName"]]
 			codeExecRegex = [t["codeExecRegex"] for t in templates if t["templateName"] == a["templateName"]][0]
 			codeExecURL = a["codeExecURL"]
 			dynamicPayload = a["dynamicPayload"]
+			staticFilename = a["staticFilename"]
 
-			f = executor.submit(up.submitTestCase,suffix,mime,payload,codeExecRegex,codeExecURL,dynamicPayload)
+			f = executor.submit(up.submitTestCase, suffix, mime, payload, codeExecRegex, codeExecURL, dynamicPayload, payloadFilename,
+								staticFilename)
 			f.a = a
 			futures.append(f)
 
