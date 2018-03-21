@@ -3,6 +3,7 @@ image/x-ms-bmp bmp
 image/png png
 image/tiff tiff tif
 image/svg+xml svg svgz
+application/octet-stream mvg
 image/gif gif
 image/vnd.microsoft.icon ico
 text/plain asc txt text pot brf srt
