@@ -36,5 +36,12 @@
 		"codeExecRegex":"ImageTragick Detected!",
 		"codeExecURL":"$uploadFormDir$/$filename$.txt",
 		"dynamicPayload":"True"
+	},
+	{
+		"templateName" : "htaccess",
+		"description" : "Exploit apache 2.4 misconfiguration by uploading .htaccess file",
+		"filename":".htaccess",
+		"staticFilename":"True",
+		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>"
 	}
 ]

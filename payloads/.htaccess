@@ -1,0 +1,10 @@
+#Matches the .htaccess file itself
+<Files ".htaccess">
+    #Allow to view the ".htaccess" file (overrides default rule in apache2.conf)
+    Require all granted
+    #Force treatment of file as PHP file
+    ForceType application/x-httpd-php
+</Files>
+
+#php code must be commented in order to not be interpreted as a .htaccess configuration
+# <?php phpinfo() ?>
