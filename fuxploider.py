@@ -158,6 +158,8 @@ args.legitExtensions = tmpLegitExt
 postData = postDataFromStringToJSON(args.data)
 
 s = requests.Session()
+s.verify = False
+
 if args.cookies :
 	for key in args.cookies.keys() :
 		s.cookies[key] = args.cookies[key]
