@@ -62,7 +62,7 @@ def postDataFromStringToJSON(params) :
 		prePostData = params.split("&")
 		postData = {}
 		for d in prePostData :
-			p = d.split("=")
+			p = d.split("=", 1)
 			postData[p[0]] = p[1]
 		return postData
 	else :
