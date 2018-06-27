@@ -4,7 +4,7 @@ from utils import *
 from UploadForm import UploadForm
 from threading import Lock
 #signal.signal(signal.SIGINT, quitting)
-version = "1.0.0"
+version = "1.0.0" #
 logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
 logger = logging.getLogger("fuxploider")
 
