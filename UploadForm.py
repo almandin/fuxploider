@@ -46,7 +46,7 @@ class UploadForm :
 		except Exception as e :
 				self.logger.critical("%s : Host unreachable (%s)",getHost(initUrl),e)
 				exit()
-		#récupérer le formulaire,le détecter
+		#detect and get the form's data
 		detectedForms = detectForms(initGet.text)
 		if len(detectedForms) == 0 :
 			self.logger.critical("No HTML form found here")
