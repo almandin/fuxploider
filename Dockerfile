@@ -1,5 +1,5 @@
 FROM python:3.5-alpine
-LABEL maintainer="Mostafa Hussein <mostafa.hussein91@gmail.com>"
+LABEL author="Mostafa Hussein <mostafa.hussein91@gmail.com>"
 RUN apk add --no-cache gcc musl-dev libxml2-dev libxslt-dev openssl
 COPY . /home/fuxploider
 WORKDIR /home/fuxploider
