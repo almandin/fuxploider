@@ -15,6 +15,11 @@ Installation
     cd fuxploider
     pip3 install -r requirements.txt
 
+For Docker installation
+
+    # Build the docker image
+    docker build -t almandin/fuxploider .
+
 Usage
 ----
 
