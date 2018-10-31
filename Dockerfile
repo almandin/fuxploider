@@ -1,4 +1,4 @@
-FROM python:3.5-alpine
+FROM python:3.6-alpine
 LABEL author="Mostafa Hussein <mostafa.hussein91@gmail.com>"
 RUN apk add --no-cache gcc musl-dev libxml2-dev libxslt-dev openssl
 COPY . /home/fuxploider
