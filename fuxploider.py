@@ -295,7 +295,7 @@ attempts = []
 templatesData = {}
 
 for template in templates:
-    with open(os.path.join((templatesFolder, template["filename"])), "rb") as templatefd:
+    with open(os.path.join((templatesFolder + "/" + template["filename"])), 'rb') as templatefd:
         templatesData[template["templateName"]] = templatefd.read()
     nastyExt = template.get("nastyExt")
     nastyMime = None if nastyExt is None else getMime(extensions, nastyExt)
