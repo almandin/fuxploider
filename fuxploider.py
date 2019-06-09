@@ -28,7 +28,7 @@ logging.getLogger("requests").setLevel(logging.ERROR)
 
 #################### TEMPLATES DEFINITION HERE ######################
 templatesFolder = "payloads"
-with open("templates.json", "r") as fd:
+with open("templates.json", "r", encoding='utf-8') as fd:
     templates = json.loads(fd.read())
 
 #######################################################################
