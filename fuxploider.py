@@ -16,6 +16,9 @@ from utils import *
 from UploadForm import UploadForm
 from threading import Lock
 
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
 __version__ = "1.0.0"
 logging.basicConfig(datefmt='[%m/%d/%Y-%H:%M:%S]')
 logger = logging.getLogger("fuxploider")
