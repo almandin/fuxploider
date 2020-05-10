@@ -17,6 +17,10 @@ _You will need Python 3.6 at least._
     cd fuxploider
     pip3 install -r requirements.txt
 
+If you have problems with pip (and if you use windows apparently) :
+
+    python3 -m pip install -r requirements.txt
+
 For Docker installation
 
     # Build the docker image
