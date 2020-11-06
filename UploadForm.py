@@ -58,7 +58,7 @@ class UploadForm:
                 exit(1)
 
         # Detect and get the form's data
-        detectedForms = detectForms(initGet.text)
+        detectedForms = self.detectForms(initGet.text)
         if not detectedForms:
             self.logger.critical("No HTML forms found.")
             exit()
