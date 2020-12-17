@@ -255,8 +255,8 @@ class UploadForm:
                     url = codeExecURL.replace("$uploadFormDir$", os.path.dirname(self.uploadUrl)) \
                                      .replace("$filename$", filename_wo_ext)
                 else:
-                    url = f"{self.schema}://{self.host}/{self.uploadsFolder}/{fu[1].text}"
-                filename = fu[1].text
+                    url = f"{self.schema}://{self.host}/{self.uploadsFolder}/{fu[1]}"
+                filename = fu[1]
                 secondUrl = None
                 for byte in getPoisoningBytes():
                     if byte in filename:
