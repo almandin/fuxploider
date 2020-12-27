@@ -11,6 +11,7 @@ import concurrent.futures
 
 import coloredlogs
 import requests
+import sys
 
 from utils import *
 from UploadForm import UploadForm
@@ -108,7 +109,7 @@ if args.template:
         logging.warning("Unknown template: %s", args.template)
         cont = input("Use default templates instead ? [Y/n]")
         if not cont.lower().startswith("y"):
-            exit()
+            sys.exit()
     else:
         templates = [[x for x in templates if x["templateName"] == args.template][0]]
 if args.regexOverride:
@@ -270,7 +271,7 @@ else:
 
 if up.validExtensions == []:
     logger.error("No valid extension found.")
-    exit()
+    sys.exit()
 
 b = datetime.datetime.now()
 print("Extensions detection: "+str(b-a))
@@ -283,7 +284,7 @@ up.shouldLog = True
 if cont.lower().startswith("y") or cont == "":
     pass
 else:
-    exit("Exiting.")
+    sys.exit("Exiting.")
 
 entryPoints = []
 up.stopThreads = True

@@ -1,6 +1,7 @@
 import re
 import os
 import logging
+import sys
 import tempfile
 import concurrent.futures
 from threading import Lock
@@ -52,22 +53,22 @@ class UploadForm:
             if initGet.status_code < 200 or initGet.status_code > 300:
                 self.logger.critical("Server responded with following status: %s - %s",
                                      initGet.status_code, initGet.reason)
-                exit(1)
+                sys.exit(1)
         except Exception as e:
                 self.logger.critical("%s: Host unreachable (%s)", getHost(initUrl), e)
-                exit(1)
+                sys.exit(1)
 
         # Detect and get the form's data
         detectedForms = detectForms(initGet.text)
         if not detectedForms:
             self.logger.critical("No HTML forms found.")
-            exit()
+            sys.exit()
         if len(detectedForms) > 1:
             self.logger.critical("%s forms found containing file upload inputs, no way to choose which one to test.", len(detectedForms))
-            exit()
+            sys.exit()
         if len(detectedForms[0][1]) > 1:
             self.logger.critical("%s file inputs found inside the same form, no way to choose which one to test.", len(detectedForms[0]))
-            exit()
+            sys.exit()
 
         self.inputName = detectedForms[0][1][0]["name"]
         self.logger.debug("Found the following file upload input: %s", self.inputName)
