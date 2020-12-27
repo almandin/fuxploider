@@ -277,7 +277,8 @@ class UploadForm:
                     result["url"] = secondUrl
         return result
 
-    def detectForms(self, html):
+    @staticmethod
+    def detectForms(html):
         """Detect HTML forms.
 
         Returns a list of BeauitifulSoup objects (detected forms).
