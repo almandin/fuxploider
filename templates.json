@@ -43,5 +43,14 @@
 		"filename":".htaccess",
 		"staticFilename":"True",
 		"codeExecRegex":"\\<title\\>phpinfo\\(\\)\\<\\/title\\>(.|\n)*\\<h2\\>PHP License\\<\\/h2\\>"
-	}
+	},
+	
+	{
+        "templateName": "basicNodeJs",
+        "description": "Basic Node.js file with a simple HTTP server.",
+        "filename": "template.js",
+        "nastyExt": "js",
+        "codeExecRegex": "Node.js server running at http:\\/\\/[0-9.]+:[0-9]+",
+        "extVariants": ["Js", "jS", "JS", "jscript", "JScript", "JS1", "JS2", "JS3", "JS4", "JS5", "JS6", "JS7", "JS8", "JS9"]
+    }
 ]
