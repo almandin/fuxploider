@@ -141,7 +141,11 @@ class UploadForm:
                 if self.trueRegex:
                     moreInfo = re.search(self.trueRegex, html)
                     if moreInfo:
-                        result = str(moreInfo.groups())
+                        try:
+                            result = str(moreInfo.group(1))
+                        except:
+                            result = str(moreInfo.group(0))
+                            
         if self.trueRegex and not result:
             fileUploaded = re.search(self.trueRegex, html)
             if fileUploaded:

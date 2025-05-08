@@ -156,8 +156,8 @@ if args.manualFormDetection and args.inputName is None:
 
 print("""\033[1;32m
 
- ___             _     _   _ 
-|  _|_ _ _ _ ___| |___|_|_| |___ ___ 
+ ___             _     _   _
+|  _|_ _ _ _ ___| |___|_|_| |___ ___
 |  _| | |_'_| . | | . | | . | -_|  _|
 |_| |___|_,_|  _|_|___|_|___|___|_|
             |_|
@@ -244,6 +244,15 @@ if args.manualFormDetection:
                        "Defaulting to empty string - meaning form action will be set to --url parameter.")
     up = UploadForm(args.notRegex, args.trueRegex, s, args.size, postData, args.uploadsPath,
                     args.url, args.formAction, args.inputName)
+    if not args.uploadsPath and args.trueRegex:
+        print("No uploads path provided, code detection can still be done "
+              "using true regex capturing group. "
+              "(Except for templates with a custom codeExecURL)")
+        cont = input("Do you want to use the True Regex for code execution detection ? [Y/n] ")
+        if cont.lower().startswith("y") or cont == "":
+            prefixPattern = input("Prefix capturing group of the true regex with: ")
+            suffixPattern = input("Suffix capturing group of the true regex with: ")
+            up.codeExecUrlPattern = "".join((prefixPattern, "$captGroup$", suffixPattern))
 else:
     up = UploadForm(args.notRegex, args.trueRegex, s, args.size, postData, args.uploadsPath)
     up.setup(args.url)
@@ -404,3 +413,4 @@ d = datetime.datetime.now()
 logging.info("%s entry point(s) found using %s HTTP requests.", nbOfEntryPointsFound, up.httpRequests)
 print("\nFound the following entry points: ")
 print(entryPoints)
+
